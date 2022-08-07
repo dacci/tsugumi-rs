@@ -72,13 +72,10 @@ impl Context {
         {
             let image =
                 builder.add_image(self.book_base.join(&self.book.cover), Some("cover-image"));
-            let xhtml = self.build_page(image, true)?;
-            let page = builder
-                .add_xhtml(xhtml, "p-cover", Some("svg"))
-                .href
-                .clone();
+            let xhtml = self.build_page(image.as_ref(), true)?;
+            let page = builder.add_xhtml(xhtml, "p-cover", Some("svg"));
             builder.add_page("p-cover", "rendition:page-spread-center");
-            builder.add_navigation("表紙", page);
+            builder.add_navigation("表紙", page.href.clone());
         }
 
         for chapter in &self.book.chapters {
@@ -87,8 +84,8 @@ impl Context {
                 let image = builder.add_image(self.book_base.join(path), None);
 
                 let id = format!("p-{}", path.file_stem().unwrap().to_str().unwrap());
-                let path = self.build_page(image, false)?;
-                let page = builder.add_xhtml(path, &id, Some("svg")).href.clone();
+                let path = self.build_page(image.as_ref(), false)?;
+                let page = builder.add_xhtml(path, &id, Some("svg"));
 
                 let props = match i % 2 {
                     0 => "page-spread-left",
@@ -98,7 +95,7 @@ impl Context {
                 builder.add_page(&id, props);
 
                 if i == 0 && chapter.name.is_some() {
-                    builder.add_navigation(chapter.name.as_ref().unwrap(), page);
+                    builder.add_navigation(chapter.name.as_ref().unwrap(), page.href.clone());
                 }
             }
         }

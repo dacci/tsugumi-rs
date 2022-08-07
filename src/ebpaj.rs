@@ -5,6 +5,7 @@ use std::fmt;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use tempfile::TempPath;
 use uuid::Uuid;
 use xml::writer::XmlEvent;
@@ -87,7 +88,7 @@ pub struct Builder {
     title: Option<String>,
     author: Option<String>,
     dir: Direction,
-    items: Map<String, Item>,
+    items: Map<String, Rc<Item>>,
     spine: Vec<ItemRef>,
     nav: IndexMap<String, Href>,
 }
@@ -128,8 +129,8 @@ impl Builder {
         self
     }
 
-    pub fn add_style(&mut self, path: PathBuf, id: String) -> &Item {
-        let item = Item {
+    pub fn add_style(&mut self, path: PathBuf, id: String) -> Rc<Item> {
+        let item = Rc::new(Item {
             media_type: "text/css".to_string(),
             href: Href(
                 Self::STYLE,
@@ -137,13 +138,13 @@ impl Builder {
             ),
             props: None,
             path: path.into(),
-        };
-        self.items.insert(id.clone(), item);
+        });
+        self.items.insert(id, Rc::clone(&item));
 
-        self.items.get(&id).unwrap()
+        item
     }
 
-    pub fn add_image(&mut self, path: impl AsRef<Path>, props: Option<&str>) -> &Item {
+    pub fn add_image(&mut self, path: impl AsRef<Path>, props: Option<&str>) -> Rc<Item> {
         let path = path.as_ref();
         let media_type = mime_guess::from_path(path)
             .first_or_octet_stream()
@@ -160,29 +161,32 @@ impl Builder {
             ),
         };
 
-        let item = Item {
+        let item = Rc::new(Item {
             media_type,
             href: Href(Self::IMAGE, href),
             props: props.map(ToOwned::to_owned),
             path: path.into(),
-        };
-        self.items.insert(id.clone(), item);
+        });
+        self.items.insert(id, Rc::clone(&item));
 
-        self.items.get(&id).unwrap()
+        item
     }
 
-    pub fn add_xhtml(&mut self, path: impl Into<Resource>, id: &str, props: Option<&str>) -> &Item {
-        let path = path.into();
-
-        let item = Item {
+    pub fn add_xhtml(
+        &mut self,
+        path: impl Into<Resource>,
+        id: &str,
+        props: Option<&str>,
+    ) -> Rc<Item> {
+        let item = Rc::new(Item {
             media_type: "application/xhtml+xml".to_string(),
             href: Href(Self::XHTML, format!("{}.xhtml", id)),
             props: props.map(ToOwned::to_owned),
-            path,
-        };
-        self.items.insert(id.to_string(), item);
+            path: path.into(),
+        });
+        self.items.insert(id.to_string(), Rc::clone(&item));
 
-        self.items.get(id).unwrap()
+        item
     }
 
     pub fn add_page(&mut self, idref: &str, props: &str) {
