@@ -75,7 +75,7 @@ impl Context {
             let xhtml = self.build_page(image.as_ref(), true)?;
             let page = builder.add_xhtml(xhtml, "p-cover", Some("svg"));
             builder.add_page("p-cover", "rendition:page-spread-center");
-            builder.add_navigation("表紙", page.href.clone());
+            builder.add_navigation("表紙", &page.href);
         }
 
         for chapter in &self.book.chapters {
@@ -94,8 +94,10 @@ impl Context {
                 };
                 builder.add_page(&id, props);
 
-                if i == 0 && chapter.name.is_some() {
-                    builder.add_navigation(chapter.name.as_ref().unwrap(), page.href.clone());
+                if i == 0 {
+                    if let Some(name) = &chapter.name {
+                        builder.add_navigation(name, &page.href);
+                    }
                 }
             }
         }

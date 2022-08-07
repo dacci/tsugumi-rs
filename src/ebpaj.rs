@@ -197,8 +197,8 @@ impl Builder {
         });
     }
 
-    pub fn add_navigation(&mut self, caption: &str, href: Href) {
-        self.nav.insert(caption.to_string(), href);
+    pub fn add_navigation(&mut self, caption: &str, href: &Href) {
+        self.nav.insert(caption.to_string(), href.clone());
     }
 
     pub fn build(&self, path: &Path) -> anyhow::Result<()> {
