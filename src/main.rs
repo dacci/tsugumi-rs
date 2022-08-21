@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use tempfile::{NamedTempFile, TempPath};
 use tsugumi::ebpaj::{Builder, Direction, Item};
-use tsugumi::{Book, Style};
+use tsugumi::{Book, Spread, Style};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 
@@ -78,6 +78,8 @@ impl Context {
             builder.add_navigation("表紙", &page.href);
         }
 
+        let mut spread = Spread::Center;
+
         for chapter in &self.book.chapters {
             for i in 0..chapter.pages.len() {
                 let page = &chapter.pages[i];
@@ -85,18 +87,20 @@ impl Context {
 
                 let id = format!("p-{}", page.path.file_stem().unwrap().to_str().unwrap());
                 let path = self.build_page(image.as_ref(), false)?;
-                let page = builder.add_xhtml(path, &id, Some("svg"));
+                let item = builder.add_xhtml(path, &id, Some("svg"));
 
-                let props = match i % 2 {
-                    0 => "page-spread-left",
-                    1 => "page-spread-right",
-                    _ => unreachable!(),
+                spread = page.spread.unwrap_or_else(|| spread.next().unwrap());
+
+                let props = match spread {
+                    Spread::Left => "page-spread-left",
+                    Spread::Right => "page-spread-right",
+                    Spread::Center => "rendition:page-spread-center",
                 };
                 builder.add_page(&id, props);
 
                 if i == 0 {
                     if let Some(name) = &chapter.name {
-                        builder.add_navigation(name, &page.href);
+                        builder.add_navigation(name, &item.href);
                     }
                 }
             }
