@@ -2,7 +2,7 @@ use clap::Parser;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use tempfile::{NamedTempFile, TempPath};
-use tsugumi::ebpaj::{Builder, Direction, Item};
+use tsugumi::ebpaj::{Builder, Item};
 use tsugumi::{Book, Spread, Style};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
@@ -65,7 +65,7 @@ impl Context {
         let mut builder = Builder::new()
             .title(&self.book.metadata.title)
             .author(&self.book.metadata.author)
-            .direction(Direction::RightToLeft);
+            .direction(self.book.direction);
 
         if let Some(subtitle) = &self.book.metadata.subtitle {
             builder.set_subtitle(subtitle);
@@ -101,7 +101,9 @@ impl Context {
                 let path = self.build_page(image.as_ref(), false)?;
                 let item = builder.add_xhtml(path, &id, Some("svg"));
 
-                spread = page.spread.unwrap_or_else(|| spread.next().unwrap());
+                spread = page
+                    .spread
+                    .unwrap_or_else(|| spread.next(self.book.direction));
 
                 let props = match spread {
                     Spread::Left => "page-spread-left",

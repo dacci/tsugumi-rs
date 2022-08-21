@@ -10,6 +10,8 @@ use std::path::PathBuf;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Book {
     pub metadata: Metadata,
+    #[serde(default)]
+    pub direction: Direction,
     pub cover: PathBuf,
     #[serde(default)]
     pub chapters: Vec<Chapter>,
@@ -23,6 +25,52 @@ pub struct Metadata {
     pub series: Option<Collection>,
     pub set: Option<Collection>,
     pub author: String,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    #[default]
+    RightToLeft,
+    LeftToRight,
+}
+
+impl AsRef<str> for Direction {
+    fn as_ref(&self) -> &str {
+        match self {
+            Direction::RightToLeft => "rtl",
+            Direction::LeftToRight => "ltr",
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for Direction {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Direction;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("a string")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                match v {
+                    "rtl" => Ok(Direction::RightToLeft),
+                    "ltr" => Ok(Direction::LeftToRight),
+                    variant => Err(de::Error::unknown_variant(variant, &["rtl", "ltr"])),
+                }
+            }
+        }
+
+        deserializer.deserialize_identifier(Visitor)
+    }
+}
+
+impl ser::Serialize for Direction {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_ref())
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -183,13 +231,15 @@ impl ser::Serialize for Spread {
     }
 }
 
-impl Iterator for Spread {
-    type Item = Spread;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl Spread {
+    pub fn next(&self, dir: Direction) -> Self {
         match self {
-            Spread::Left | Spread::Center => Some(Self::Right),
-            Spread::Right => Some(Self::Left),
+            Spread::Left => Self::Right,
+            Spread::Right => Self::Left,
+            Spread::Center => match dir {
+                Direction::RightToLeft => Self::Right,
+                Direction::LeftToRight => Self::Left,
+            },
         }
     }
 }
@@ -257,8 +307,9 @@ mod tests {
 
     #[test]
     fn test_spread_next() {
-        assert_eq!(Spread::Left.next(), Some(Spread::Right));
-        assert_eq!(Spread::Right.next(), Some(Spread::Left));
-        assert_eq!(Spread::Center.next(), Some(Spread::Right));
+        assert_eq!(Spread::Left.next(Direction::RightToLeft), Spread::Right);
+        assert_eq!(Spread::Right.next(Direction::RightToLeft), Spread::Left);
+        assert_eq!(Spread::Center.next(Direction::RightToLeft), Spread::Right);
+        assert_eq!(Spread::Center.next(Direction::LeftToRight), Spread::Left);
     }
 }

@@ -1,3 +1,4 @@
+use crate::Direction;
 use chrono::{SecondsFormat, Utc};
 use indexmap::IndexMap;
 use std::collections::BTreeMap as Map;
@@ -12,22 +13,6 @@ use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 use zip::write::{FileOptions, ZipWriter};
 use zip::CompressionMethod;
-
-#[derive(Default)]
-pub enum Direction {
-    #[default]
-    LeftToRight,
-    RightToLeft,
-}
-
-impl AsRef<str> for Direction {
-    fn as_ref(&self) -> &str {
-        match self {
-            Direction::LeftToRight => "ltr",
-            Direction::RightToLeft => "rtl",
-        }
-    }
-}
 
 pub enum Resource {
     PathBuf(PathBuf),
