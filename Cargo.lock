@@ -452,6 +452,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_test"
+version = "1.0.143"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4b5b007c1bccdc70f8d8b5804da305a64d4279f990f1ae9e3b06eaae46f42e0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_yaml"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -532,6 +541,7 @@ dependencies = [
  "indexmap",
  "mime_guess",
  "serde",
+ "serde_test",
  "serde_yaml",
  "tempfile",
  "uuid",

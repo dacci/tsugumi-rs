@@ -80,10 +80,10 @@ impl Context {
 
         for chapter in &self.book.chapters {
             for i in 0..chapter.pages.len() {
-                let path = &chapter.pages[i];
-                let image = builder.add_image(self.book_base.join(path), None);
+                let page = &chapter.pages[i];
+                let image = builder.add_image(self.book_base.join(&page.path), None);
 
-                let id = format!("p-{}", path.file_stem().unwrap().to_str().unwrap());
+                let id = format!("p-{}", page.path.file_stem().unwrap().to_str().unwrap());
                 let path = self.build_page(image.as_ref(), false)?;
                 let page = builder.add_xhtml(path, &id, Some("svg"));
 
