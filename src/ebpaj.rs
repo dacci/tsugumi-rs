@@ -337,6 +337,8 @@ impl Builder {
             XmlEvent::start_element("metadata").ns("dc", "http://purl.org/dc/elements/1.1/"),
         )?;
 
+        let mut digest = md5::Context::new();
+
         if let Some(title) = &self.title {
             writer.write(XmlEvent::start_element("dc:title").attr("id", "title"))?;
             writer.write(XmlEvent::characters(title))?;
@@ -349,6 +351,8 @@ impl Builder {
             )?;
             writer.write(XmlEvent::characters("main"))?;
             writer.write(XmlEvent::end_element())?;
+
+            digest.write_all(title.as_bytes())?;
         }
 
         if let Some(subtitle) = &self.subtitle {
@@ -363,6 +367,9 @@ impl Builder {
             )?;
             writer.write(XmlEvent::characters("subtitle"))?;
             writer.write(XmlEvent::end_element())?;
+
+            digest.write_all(&[0])?;
+            digest.write_all(subtitle.as_bytes())?;
         }
 
         if let Some(author) = &self.author {
@@ -378,6 +385,9 @@ impl Builder {
             )?;
             writer.write(XmlEvent::characters("aut"))?;
             writer.write(XmlEvent::end_element())?;
+
+            digest.write_all(&[0])?;
+            digest.write_all(author.as_bytes())?;
         }
 
         if let Some(title) = &self.series_title {
@@ -404,6 +414,9 @@ impl Builder {
             )?;
             writer.write(XmlEvent::end_element())?;
 
+            digest.write_all(&[0])?;
+            digest.write_all(title.as_bytes())?;
+
             if let Some(position) = &self.series_position {
                 writer.write(
                     XmlEvent::start_element("meta")
@@ -419,6 +432,9 @@ impl Builder {
                         .attr("content", position),
                 )?;
                 writer.write(XmlEvent::end_element())?;
+
+                digest.write_all(&[0])?;
+                digest.write_all(position.as_bytes())?;
             }
         }
 
@@ -439,6 +455,9 @@ impl Builder {
             writer.write(XmlEvent::characters("set"))?;
             writer.write(XmlEvent::end_element())?;
 
+            digest.write_all(&[0])?;
+            digest.write_all(title.as_bytes())?;
+
             if let Some(position) = &self.set_position {
                 writer.write(
                     XmlEvent::start_element("meta")
@@ -447,6 +466,9 @@ impl Builder {
                 )?;
                 writer.write(XmlEvent::characters(position))?;
                 writer.write(XmlEvent::end_element())?;
+
+                digest.write_all(&[0])?;
+                digest.write_all(position.as_bytes())?;
             }
         }
 
@@ -454,11 +476,18 @@ impl Builder {
         writer.write(XmlEvent::characters("ja"))?;
         writer.write(XmlEvent::end_element())?;
 
+        let uuid = {
+            let mut digest: [u8; 16] = digest.compute().into();
+            // Copied from java.util.UUID#nameUUIDFromBytes(byte[])
+            digest[6] &= 0x0f; // clear version
+            digest[6] |= 0x30; // set to version 3
+            digest[8] &= 0x3f; // clear variant
+            digest[8] |= 0x80; // set to IETF variant
+            Uuid::from_slice(&digest)?
+        };
+
         writer.write(XmlEvent::start_element("dc:identifier").attr("id", "unique-id"))?;
-        writer.write(XmlEvent::characters(&format!(
-            "urn:uuid:{}",
-            Uuid::new_v4()
-        )))?;
+        writer.write(XmlEvent::characters(&format!("urn:uuid:{}", uuid)))?;
         writer.write(XmlEvent::end_element())?;
 
         writer.write(XmlEvent::start_element("meta").attr("property", "dcterms:modified"))?;
