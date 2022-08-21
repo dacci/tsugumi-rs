@@ -7,6 +7,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Book {
     pub metadata: Metadata,
     pub cover: PathBuf,
@@ -15,12 +16,14 @@ pub struct Book {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Metadata {
     pub title: String,
     pub author: String,
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Chapter {
     pub name: Option<String>,
     #[serde(default)]
@@ -28,6 +31,7 @@ pub struct Chapter {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Page {
     pub path: PathBuf,
     pub spread: Option<Spread>,
@@ -38,8 +42,9 @@ impl<'de> de::Deserialize<'de> for Page {
         enum Field {
             Path,
             Spread,
-            _Unknown,
         }
+
+        const FIELDS: &[&str] = &["path", "spread"];
 
         struct FieldVisitor;
 
@@ -54,7 +59,7 @@ impl<'de> de::Deserialize<'de> for Page {
                 match v {
                     "path" => Ok(Field::Path),
                     "spread" => Ok(Field::Spread),
-                    _ => Ok(Field::_Unknown),
+                    field => Err(de::Error::unknown_field(field, FIELDS)),
                 }
             }
         }
@@ -105,9 +110,6 @@ impl<'de> de::Deserialize<'de> for Page {
                                 return Err(de::Error::duplicate_field("spread"));
                             }
                             spread = Some(map.next_value()?);
-                        }
-                        Field::_Unknown => {
-                            map.next_value::<de::IgnoredAny>()?;
                         }
                     }
                 }
@@ -183,8 +185,8 @@ impl Iterator for Spread {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Style {
-    #[serde(default)]
     pub links: Vec<PathBuf>,
     #[serde(default)]
     pub includes: Vec<PathBuf>,
@@ -204,8 +206,6 @@ mod tests {
             },
             &[
                 Token::Map { len: Some(3) },
-                Token::Str("answer"),
-                Token::I32(42),
                 Token::Str("path"),
                 Token::Str("test"),
                 Token::Str("spread"),
@@ -228,6 +228,10 @@ mod tests {
         assert_de_tokens_error::<Page>(
             &[Token::Map { len: Some(1) }, Token::I32(0)],
             "invalid type: integer `0`, expected an identifier",
+        );
+        assert_de_tokens_error::<Page>(
+            &[Token::Map { len: None }, Token::Str("hoge")],
+            "unknown field `hoge`, expected `path` or `spread`",
         );
     }
 
