@@ -67,6 +67,18 @@ impl Context {
             .author(&self.book.metadata.author)
             .direction(Direction::RightToLeft);
 
+        if let Some(subtitle) = &self.book.metadata.subtitle {
+            builder.set_subtitle(subtitle);
+        }
+
+        if let Some(series) = &self.book.metadata.series {
+            builder.set_series(&series.title, series.position.as_deref());
+        }
+
+        if let Some(set) = &self.book.metadata.set {
+            builder.set_set(&set.title, set.position.as_deref());
+        }
+
         self.build_style(&mut builder);
 
         {

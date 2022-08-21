@@ -86,7 +86,12 @@ pub struct ItemRef {
 #[derive(Default)]
 pub struct Builder {
     title: Option<String>,
+    subtitle: Option<String>,
     author: Option<String>,
+    series_title: Option<String>,
+    series_position: Option<String>,
+    set_title: Option<String>,
+    set_position: Option<String>,
     dir: Direction,
     items: Map<String, Rc<Item>>,
     spine: Vec<ItemRef>,
@@ -111,12 +116,41 @@ impl Builder {
         self
     }
 
+    pub fn set_subtitle(&mut self, subtitle: &str) {
+        self.subtitle = Some(subtitle.to_string());
+    }
+
+    pub fn subtitle(mut self, subtitle: &str) -> Self {
+        self.set_subtitle(subtitle);
+        self
+    }
+
     pub fn set_author(&mut self, author: &str) {
         self.author = Some(author.to_string());
     }
 
     pub fn author(mut self, author: &str) -> Self {
         self.set_author(author);
+        self
+    }
+
+    pub fn set_series(&mut self, title: &str, position: Option<&str>) {
+        self.series_title = Some(title.to_string());
+        self.series_position = position.map(|s| s.to_string());
+    }
+
+    pub fn series(mut self, title: &str, position: Option<&str>) -> Self {
+        self.set_series(title, position);
+        self
+    }
+
+    pub fn set_set(&mut self, title: &str, position: Option<&str>) {
+        self.set_title = Some(title.to_string());
+        self.set_position = position.map(|s| s.to_string());
+    }
+
+    pub fn set(mut self, title: &str, position: Option<&str>) -> Self {
+        self.set_set(title, position);
         self
     }
 
@@ -319,15 +353,116 @@ impl Builder {
         )?;
 
         if let Some(title) = &self.title {
-            writer.write(XmlEvent::start_element("dc:title"))?;
+            writer.write(XmlEvent::start_element("dc:title").attr("id", "title"))?;
             writer.write(XmlEvent::characters(title))?;
+            writer.write(XmlEvent::end_element())?;
+
+            writer.write(
+                XmlEvent::start_element("meta")
+                    .attr("refines", "#title")
+                    .attr("property", "title-type"),
+            )?;
+            writer.write(XmlEvent::characters("main"))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(subtitle) = &self.subtitle {
+            writer.write(XmlEvent::start_element("dc:title").attr("id", "subtitle"))?;
+            writer.write(XmlEvent::characters(subtitle))?;
+            writer.write(XmlEvent::end_element())?;
+
+            writer.write(
+                XmlEvent::start_element("meta")
+                    .attr("refines", "#subtitle")
+                    .attr("property", "title-type"),
+            )?;
+            writer.write(XmlEvent::characters("subtitle"))?;
             writer.write(XmlEvent::end_element())?;
         }
 
         if let Some(author) = &self.author {
-            writer.write(XmlEvent::start_element("dc:creator"))?;
+            writer.write(XmlEvent::start_element("dc:creator").attr("id", "author"))?;
             writer.write(XmlEvent::characters(author))?;
             writer.write(XmlEvent::end_element())?;
+
+            writer.write(
+                XmlEvent::start_element("meta")
+                    .attr("refines", "#author")
+                    .attr("property", "role")
+                    .attr("scheme", "marc:relators"),
+            )?;
+            writer.write(XmlEvent::characters("aut"))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(title) = &self.series_title {
+            writer.write(
+                XmlEvent::start_element("meta")
+                    .attr("id", "series")
+                    .attr("property", "belongs-to-collection"),
+            )?;
+            writer.write(XmlEvent::characters(title))?;
+            writer.write(XmlEvent::end_element())?;
+
+            writer.write(
+                XmlEvent::start_element("meta")
+                    .attr("refines", "#series")
+                    .attr("property", "collection-type"),
+            )?;
+            writer.write(XmlEvent::characters("series"))?;
+            writer.write(XmlEvent::end_element())?;
+
+            writer.write(
+                XmlEvent::start_element("meta")
+                    .attr("name", "calibre:series")
+                    .attr("content", title),
+            )?;
+            writer.write(XmlEvent::end_element())?;
+
+            if let Some(position) = &self.series_position {
+                writer.write(
+                    XmlEvent::start_element("meta")
+                        .attr("refines", "#series")
+                        .attr("property", "group-position"),
+                )?;
+                writer.write(XmlEvent::characters(position))?;
+                writer.write(XmlEvent::end_element())?;
+
+                writer.write(
+                    XmlEvent::start_element("meta")
+                        .attr("name", "calibre:series_index")
+                        .attr("content", position),
+                )?;
+                writer.write(XmlEvent::end_element())?;
+            }
+        }
+
+        if let Some(title) = &self.set_title {
+            writer.write(
+                XmlEvent::start_element("meta")
+                    .attr("id", "set")
+                    .attr("property", "belongs-to-collection"),
+            )?;
+            writer.write(XmlEvent::characters(title))?;
+            writer.write(XmlEvent::end_element())?;
+
+            writer.write(
+                XmlEvent::start_element("meta")
+                    .attr("refines", "#set")
+                    .attr("property", "collection-type"),
+            )?;
+            writer.write(XmlEvent::characters("set"))?;
+            writer.write(XmlEvent::end_element())?;
+
+            if let Some(position) = &self.set_position {
+                writer.write(
+                    XmlEvent::start_element("meta")
+                        .attr("refines", "#set")
+                        .attr("property", "group-position"),
+                )?;
+                writer.write(XmlEvent::characters(position))?;
+                writer.write(XmlEvent::end_element())?;
+            }
         }
 
         writer.write(XmlEvent::start_element("dc:language"))?;

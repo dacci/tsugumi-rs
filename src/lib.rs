@@ -19,7 +19,17 @@ pub struct Book {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Metadata {
     pub title: String,
+    pub subtitle: Option<String>,
+    pub series: Option<Collection>,
+    pub set: Option<Collection>,
     pub author: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Collection {
+    pub title: String,
+    pub position: Option<String>,
 }
 
 #[derive(Deserialize, Serialize)]
