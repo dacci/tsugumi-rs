@@ -1,5 +1,6 @@
 use clap::Parser;
 use std::fs::File;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use tempfile::{NamedTempFile, TempPath};
 use tsugumi::ebpaj::{Builder, Item};
@@ -10,7 +11,7 @@ use xml::{EmitterConfig, EventWriter};
 #[derive(Parser)]
 struct Args {
     #[clap(short, long)]
-    style: PathBuf,
+    style: Option<PathBuf>,
     #[clap(short, long)]
     output: Option<PathBuf>,
     input: PathBuf,
@@ -20,18 +21,19 @@ fn main() -> anyhow::Result<()> {
     let args: Args = Args::parse();
 
     let book = serde_yaml::from_reader(File::open(&args.input)?)?;
-    let style = serde_yaml::from_reader(File::open(&args.style)?)?;
-
     let book_base = args
         .input
         .parent()
         .map(ToOwned::to_owned)
         .unwrap_or_default();
-    let style_base = args
-        .style
-        .parent()
-        .map(ToOwned::to_owned)
-        .unwrap_or_default();
+
+    let (style, style_base) = if let Some(path) = &args.style {
+        let style = serde_yaml::from_reader(File::open(path)?)?;
+        let style_base = path.parent().map(ToOwned::to_owned).unwrap_or_default();
+        (Some(style), Some(style_base))
+    } else {
+        (None, None)
+    };
 
     let mut ctx = Context {
         book,
@@ -55,8 +57,8 @@ fn main() -> anyhow::Result<()> {
 struct Context {
     book: Book,
     book_base: PathBuf,
-    style: Style,
-    style_base: PathBuf,
+    style: Option<Style>,
+    style_base: Option<PathBuf>,
     styles: Vec<String>,
 }
 
@@ -124,17 +126,29 @@ impl Context {
     }
 
     fn build_style(&mut self, builder: &mut Builder) {
-        for href in &self.style.links {
-            let path = self.style_base.join(href);
-            let id = href.to_id();
-            let item = builder.add_style(path, id);
-            self.styles.push(item.href.to_string())
-        }
+        if let Some(style_base) = &self.style_base {
+            let style = self.style.as_ref().unwrap();
 
-        for href in &self.style.includes {
-            let path = self.style_base.join(href);
-            let id = href.to_id();
-            builder.add_style(path, id);
+            for href in &style.links {
+                let path = style_base.join(href);
+                let id = href.to_id();
+                let item = builder.add_style(path, id);
+                self.styles.push(item.href.to_string())
+            }
+
+            for href in &style.includes {
+                let path = style_base.join(href);
+                let id = href.to_id();
+                builder.add_style(path, id);
+            }
+        } else if let Ok(mut file) = tempfile::Builder::new()
+            .prefix("style")
+            .suffix(".css")
+            .tempfile()
+        {
+            let _ = file.write_all(b"html, body { margin: 0; padding: 0; font-size: 0; }\nsvg { margin: 0; padding: 0; }\n");
+            let item = builder.add_style(file.into_temp_path(), "default".to_string());
+            self.styles.push(item.href.to_string());
         }
     }
 
