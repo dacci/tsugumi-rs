@@ -5,6 +5,7 @@ use std::collections::BTreeMap as Map;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use tempfile::TempPath;
@@ -43,6 +44,14 @@ impl AsRef<Path> for Resource {
             Resource::PathBuf(path) => path.as_path(),
             Resource::TempPath(path) => path.as_ref(),
         }
+    }
+}
+
+impl Deref for Resource {
+    type Target = Path;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 
@@ -148,7 +157,9 @@ impl Builder {
         self
     }
 
-    pub fn add_style(&mut self, path: PathBuf, id: String) -> Rc<Item> {
+    pub fn add_style(&mut self, path: impl Into<Resource>, id: String) -> Rc<Item> {
+        let path = path.into();
+
         let item = Rc::new(Item {
             media_type: "text/css".to_string(),
             href: Href(
@@ -156,16 +167,16 @@ impl Builder {
                 path.file_name().unwrap().to_str().unwrap().to_string(),
             ),
             props: None,
-            path: path.into(),
+            path,
         });
         self.items.insert(id, Rc::clone(&item));
 
         item
     }
 
-    pub fn add_image(&mut self, path: impl AsRef<Path>, props: Option<&str>) -> Rc<Item> {
-        let path = path.as_ref();
-        let media_type = mime_guess::from_path(path)
+    pub fn add_image(&mut self, path: impl Into<Resource>, props: Option<&str>) -> Rc<Item> {
+        let path = path.into();
+        let media_type = mime_guess::from_path(path.as_ref())
             .first_or_octet_stream()
             .to_string();
 
@@ -184,7 +195,7 @@ impl Builder {
             media_type,
             href: Href(Self::IMAGE, href),
             props: props.map(ToOwned::to_owned),
-            path: path.into(),
+            path,
         });
         self.items.insert(id, Rc::clone(&item));
 
@@ -572,7 +583,7 @@ mod tests {
     #[test]
     fn test_builder_add_style() {
         let mut builder = Builder::new();
-        builder.add_style("test.css".into(), "test".into());
+        builder.add_style(PathBuf::from("test.css"), "test".into());
 
         let item = builder.items.get("test").unwrap();
         assert_eq!(item.media_type, "text/css");
@@ -583,7 +594,7 @@ mod tests {
     #[test]
     fn test_builder_add_image() {
         let mut builder = Builder::new();
-        builder.add_image("test.png", None);
+        builder.add_image(PathBuf::from("test.png"), None);
 
         let item = builder.items.get("i-test").unwrap();
         assert_eq!(item.media_type, "image/png");
@@ -594,7 +605,7 @@ mod tests {
     #[test]
     fn test_builder_add_cover_image() {
         let mut builder = Builder::new();
-        builder.add_image("test.jpg", Some("cover-image"));
+        builder.add_image(PathBuf::from("test.jpg"), Some("cover-image"));
 
         let item = builder.items.get("cover").unwrap();
         assert_eq!(item.media_type, "image/jpeg");
