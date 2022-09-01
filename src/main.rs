@@ -159,9 +159,13 @@ impl Context {
         };
 
         let mut file = NamedTempFile::new()?;
+        writeln!(file, "<?xml version=\"1.0\" encoding=\"utf-8\"?>")?;
+        writeln!(file, "<!DOCTYPE html>")?;
         let mut writer = EventWriter::new_with_config(
             file.as_file_mut(),
-            EmitterConfig::new().perform_indent(true),
+            EmitterConfig::new()
+                .perform_indent(true)
+                .write_document_declaration(false),
         );
 
         writer.write(

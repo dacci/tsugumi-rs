@@ -281,7 +281,14 @@ impl Builder {
     }
 
     fn build_navigation<W: Write>(&self, w: &mut W) -> anyhow::Result<()> {
-        let mut writer = EventWriter::new_with_config(w, EmitterConfig::new().perform_indent(true));
+        writeln!(w, "<?xml version=\"1.0\" encoding=\"utf-8\"?>")?;
+        writeln!(w, "<!DOCTYPE html>")?;
+        let mut writer = EventWriter::new_with_config(
+            w,
+            EmitterConfig::new()
+                .perform_indent(true)
+                .write_document_declaration(false),
+        );
 
         writer.write(
             XmlEvent::start_element("html")
