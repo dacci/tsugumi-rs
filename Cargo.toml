@@ -10,8 +10,13 @@ license = "MIT"
 [dependencies]
 anyhow = "1.0.66"
 clap = { version = "4.0.18", features = ["derive"] }
+serde = { version = "1.0.147", features = ["derive"] }
+serde_yaml = "0.9.14"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+
+[dev-dependencies]
+serde_test = "1.0.147"
 
 [profile.release]
 codegen-units = 1

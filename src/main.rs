@@ -1,3 +1,4 @@
+mod model;
 mod task;
 
 use anyhow::{Context as _, Result};
