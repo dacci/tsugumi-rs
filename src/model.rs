@@ -1,8 +1,9 @@
 use serde::de::{self, value::Error as ValueError};
+use serde::ser::{self, SerializeMap};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields, default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Book {
@@ -11,7 +12,22 @@ pub struct Book {
     pub chapter: Vec<Chapter>,
 }
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+impl ser::Serialize for Book {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+
+        map.serialize_entry("metadata", &self.metadata)?;
+        map.serialize_entry("rendition", &self.rendition)?;
+
+        if !self.chapter.is_empty() {
+            map.serialize_entry("chapter", &self.chapter)?;
+        }
+
+        map.end()
+    }
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields, default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Metadata {
@@ -23,7 +39,33 @@ pub struct Metadata {
     pub identifier: String,
 }
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+impl ser::Serialize for Metadata {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+
+        if !self.title.is_empty() {
+            map.serialize_entry("title", &self.title)?;
+        }
+
+        if !self.creator.is_empty() {
+            map.serialize_entry("creator", &self.creator)?;
+        }
+
+        if !self.contributor.is_empty() {
+            map.serialize_entry("contributor", &self.contributor)?;
+        }
+
+        if !self.collection.is_empty() {
+            map.serialize_entry("collection", &self.collection)?;
+        }
+
+        map.serialize_entry("identifier", &self.identifier)?;
+
+        map.end()
+    }
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields, default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Title {
@@ -34,6 +76,25 @@ pub struct Title {
 
     pub alternate_script: Option<String>,
     pub file_as: Option<String>,
+}
+
+impl ser::Serialize for Title {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+
+        map.serialize_entry("name", &self.name)?;
+        map.serialize_entry("type", &serde_enum::Serialize(&self.title_type))?;
+
+        if let Some(alternate_script) = &self.alternate_script {
+            map.serialize_entry("alternateScript", alternate_script)?;
+        }
+
+        if let Some(file_as) = &self.file_as {
+            map.serialize_entry("fileAs", file_as)?;
+        }
+
+        map.end()
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -86,7 +147,7 @@ impl AsRef<str> for TitleType {
     }
 }
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields, default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Creator {
@@ -96,7 +157,29 @@ pub struct Creator {
     pub file_as: Option<String>,
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+impl ser::Serialize for Creator {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+
+        map.serialize_entry("name", &self.name)?;
+
+        if let Some(role) = &self.role {
+            map.serialize_entry("role", role)?;
+        }
+
+        if let Some(alternate_script) = &self.alternate_script {
+            map.serialize_entry("alternateScript", alternate_script)?;
+        }
+
+        if let Some(file_as) = &self.file_as {
+            map.serialize_entry("fileAs", file_as)?;
+        }
+
+        map.end()
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Collection {
@@ -106,6 +189,21 @@ pub struct Collection {
     pub collection_type: CollectionType,
 
     pub position: Option<u32>,
+}
+
+impl ser::Serialize for Collection {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+
+        map.serialize_entry("name", &self.name)?;
+        map.serialize_entry("type", &serde_enum::Serialize(&self.collection_type))?;
+
+        if let Some(position) = &self.position {
+            map.serialize_entry("position", position)?;
+        }
+
+        map.end()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -135,7 +233,7 @@ impl AsRef<str> for CollectionType {
     }
 }
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields, default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Rendition {
@@ -152,6 +250,23 @@ pub struct Rendition {
     pub spread: Spread,
 
     pub style: Vec<Style>,
+}
+
+impl ser::Serialize for Rendition {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+
+        map.serialize_entry("direction", &serde_enum::Serialize(&self.direction))?;
+        map.serialize_entry("layout", &serde_enum::Serialize(&self.layout))?;
+        map.serialize_entry("orientation", &serde_enum::Serialize(&self.orientation))?;
+        map.serialize_entry("spread", &serde_enum::Serialize(&self.spread))?;
+
+        if !self.style.is_empty() {
+            map.serialize_entry("style", &self.style)?;
+        }
+
+        map.end()
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -284,7 +399,7 @@ impl AsRef<str> for Spread {
     }
 }
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields, default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Style {
@@ -293,7 +408,22 @@ pub struct Style {
     pub src: String,
 }
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+impl ser::Serialize for Style {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+
+        if self.link {
+            map.serialize_entry("link", &self.link)?;
+        }
+
+        map.serialize_entry("href", &self.href)?;
+        map.serialize_entry("src", &self.src)?;
+
+        map.end()
+    }
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields, default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Chapter {
@@ -302,15 +432,186 @@ pub struct Chapter {
     pub cover: bool,
 }
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields, default)]
+impl ser::Serialize for Chapter {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+
+        if let Some(title) = &self.title {
+            map.serialize_entry("title", title)?;
+        }
+
+        if !self.page.is_empty() {
+            map.serialize_entry("page", &self.page)?;
+        }
+
+        if self.cover {
+            map.serialize_entry("cover", &self.cover)?;
+        }
+
+        map.end()
+    }
+}
+
+#[derive(Debug, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Page {
     pub src: PathBuf,
 }
 
+impl<'de> de::Deserialize<'de> for Page {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        <PathBuf as de::Deserialize>::deserialize(deserializer).map(|src| Page { src })
+    }
+}
+
+impl ser::Serialize for Page {
+    fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        ser::Serialize::serialize(&self.src, serializer)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_test::*;
+
+    #[test]
+    fn test_serde_book() {
+        assert_tokens(
+            &Book::default(),
+            &[
+                Token::Map { len: None },
+                Token::Str("metadata"),
+                Token::Map { len: None },
+                Token::Str("identifier"),
+                Token::Str(""),
+                Token::MapEnd,
+                Token::Str("rendition"),
+                Token::Map { len: None },
+                Token::Str("direction"),
+                Token::Str("rtl"),
+                Token::Str("layout"),
+                Token::Str("pre-paginated"),
+                Token::Str("orientation"),
+                Token::Str("auto"),
+                Token::Str("spread"),
+                Token::Str("auto"),
+                Token::MapEnd,
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_serde_metadata() {
+        assert_tokens(
+            &Metadata::default(),
+            &[
+                Token::Map { len: None },
+                Token::Str("identifier"),
+                Token::Str(""),
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_serde_title() {
+        assert_tokens(
+            &Title::default(),
+            &[
+                Token::Map { len: None },
+                Token::Str("name"),
+                Token::Str(""),
+                Token::Str("type"),
+                Token::Str("main"),
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_serde_creator() {
+        assert_tokens(
+            &Creator::default(),
+            &[
+                Token::Map { len: None },
+                Token::Str("name"),
+                Token::Str(""),
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_serde_collection() {
+        assert_tokens(
+            &Collection {
+                name: Default::default(),
+                collection_type: CollectionType::Series,
+                position: Default::default(),
+            },
+            &[
+                Token::Map { len: None },
+                Token::Str("name"),
+                Token::Str(""),
+                Token::Str("type"),
+                Token::Str("series"),
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_serde_rendition() {
+        assert_tokens(
+            &Rendition::default(),
+            &[
+                Token::Map { len: None },
+                Token::Str("direction"),
+                Token::Str("rtl"),
+                Token::Str("layout"),
+                Token::Str("pre-paginated"),
+                Token::Str("orientation"),
+                Token::Str("auto"),
+                Token::Str("spread"),
+                Token::Str("auto"),
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_serde_style() {
+        assert_tokens(
+            &Style::default(),
+            &[
+                Token::Map { len: None },
+                Token::Str("href"),
+                Token::Str(""),
+                Token::Str("src"),
+                Token::Str(""),
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_serde_chapter() {
+        assert_tokens(
+            &Chapter::default(),
+            &[Token::Map { len: None }, Token::MapEnd],
+        );
+    }
+
+    #[test]
+    fn test_serde_page() {
+        assert_tokens(&Page { src: "path".into() }, &[Token::Str("path")]);
+    }
+}
+
 mod serde_enum {
-    use serde::{de, ser};
+    use super::*;
     use std::error::Error;
     use std::fmt;
     use std::marker::PhantomData;
@@ -349,6 +650,14 @@ mod serde_enum {
         T: AsRef<str>,
     {
         serializer.serialize_str(v.as_ref())
+    }
+
+    pub struct Serialize<'a, T>(pub &'a T);
+
+    impl<T: AsRef<str>> ser::Serialize for Serialize<'_, T> {
+        fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serialize(&self.0, serializer)
+        }
     }
 
     #[cfg(test)]
