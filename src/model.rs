@@ -302,38 +302,149 @@ impl ser::Serialize for Metadata {
     }
 }
 
-#[derive(Debug, Default, serde::Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields, default)]
+#[derive(Debug, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Title {
     pub name: String,
-
-    #[serde(rename = "type", with = "serde_enum")]
     pub title_type: TitleType,
-
     pub alternate_script: Option<String>,
     pub file_as: Option<String>,
 }
 
+impl<'de> de::Deserialize<'de> for Title {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Title;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a map or a string")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                Ok(Title {
+                    name: v.to_string(),
+                    ..Title::default()
+                })
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                enum Field {
+                    Name,
+                    TitleType,
+                    AlternateScript,
+                    FileAs,
+                }
+
+                impl<'de> de::Deserialize<'de> for Field {
+                    fn deserialize<D: de::Deserializer<'de>>(
+                        deserializer: D,
+                    ) -> Result<Self, D::Error> {
+                        struct Visitor;
+
+                        impl<'de> de::Visitor<'de> for Visitor {
+                            type Value = Field;
+
+                            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                                formatter.write_str("an identifier")
+                            }
+
+                            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                                match v {
+                                    "name" => Ok(Field::Name),
+                                    "type" => Ok(Field::TitleType),
+                                    "alternateScript" => Ok(Field::AlternateScript),
+                                    "fileAs" => Ok(Field::FileAs),
+                                    field => Err(de::Error::unknown_field(
+                                        field,
+                                        &["name", "type", "alternateScript", "fileAs"],
+                                    )),
+                                }
+                            }
+                        }
+
+                        deserializer.deserialize_identifier(Visitor)
+                    }
+                }
+
+                let mut name = None;
+                let mut title_type = None;
+                let mut alternate_script = None;
+                let mut file_as = None;
+
+                while let Some(field) = map.next_key()? {
+                    match field {
+                        Field::Name => {
+                            if name.is_some() {
+                                return Err(de::Error::duplicate_field("name"));
+                            }
+                            name = map.next_value().map(Some)?;
+                        }
+                        Field::TitleType => {
+                            if title_type.is_some() {
+                                return Err(de::Error::duplicate_field("type"));
+                            }
+                            title_type = map
+                                .next_value::<serde_enum::Deserialize<_>>()
+                                .map(|d| d.unwrap())
+                                .map(Some)?;
+                        }
+                        Field::AlternateScript => {
+                            if alternate_script.is_some() {
+                                return Err(de::Error::duplicate_field("alternateScript"));
+                            }
+                            alternate_script = map.next_value().map(Some)?;
+                        }
+                        Field::FileAs => {
+                            if file_as.is_some() {
+                                return Err(de::Error::duplicate_field("fileAs"));
+                            }
+                            file_as = map.next_value().map(Some)?;
+                        }
+                    }
+                }
+
+                let name = name.unwrap_or_default();
+                let title_type = title_type.unwrap_or_default();
+
+                Ok(Title {
+                    name,
+                    title_type,
+                    alternate_script,
+                    file_as,
+                })
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
 impl ser::Serialize for Title {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
+        if self.title_type.is_default() && self.alternate_script.is_none() && self.file_as.is_none()
+        {
+            serializer.serialize_str(&self.name)
+        } else {
+            let mut map = serializer.serialize_map(None)?;
 
-        map.serialize_entry("name", &self.name)?;
+            map.serialize_entry("name", &self.name)?;
 
-        if !self.title_type.is_default() {
-            map.serialize_entry("type", &serde_enum::wrap(&self.title_type))?;
+            if !self.title_type.is_default() {
+                map.serialize_entry("type", &serde_enum::wrap(&self.title_type))?;
+            }
+
+            if let Some(alternate_script) = &self.alternate_script {
+                map.serialize_entry("alternateScript", alternate_script)?;
+            }
+
+            if let Some(file_as) = &self.file_as {
+                map.serialize_entry("fileAs", file_as)?;
+            }
+
+            map.end()
         }
-
-        if let Some(alternate_script) = &self.alternate_script {
-            map.serialize_entry("alternateScript", alternate_script)?;
-        }
-
-        if let Some(file_as) = &self.file_as {
-            map.serialize_entry("fileAs", file_as)?;
-        }
-
-        map.end()
     }
 }
 
@@ -387,8 +498,7 @@ impl AsRef<str> for TitleType {
     }
 }
 
-#[derive(Debug, Default, serde::Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields, default)]
+#[derive(Debug, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Creator {
     pub name: String,
@@ -397,25 +507,132 @@ pub struct Creator {
     pub file_as: Option<String>,
 }
 
+impl<'de> de::Deserialize<'de> for Creator {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Creator;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a map or a string")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                Ok(Creator {
+                    name: v.to_string(),
+                    ..Creator::default()
+                })
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                enum Field {
+                    Name,
+                    Role,
+                    AlternateScript,
+                    FileAs,
+                }
+
+                impl<'de> de::Deserialize<'de> for Field {
+                    fn deserialize<D: de::Deserializer<'de>>(
+                        deserializer: D,
+                    ) -> Result<Self, D::Error> {
+                        struct Visitor;
+
+                        impl<'de> de::Visitor<'de> for Visitor {
+                            type Value = Field;
+
+                            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                                formatter.write_str("an identifier")
+                            }
+
+                            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                                match v {
+                                    "name" => Ok(Field::Name),
+                                    "role" => Ok(Field::Role),
+                                    "alternateScript" => Ok(Field::AlternateScript),
+                                    "fileAs" => Ok(Field::FileAs),
+                                    field => Err(de::Error::unknown_field(field, &[])),
+                                }
+                            }
+                        }
+
+                        deserializer.deserialize_identifier(Visitor)
+                    }
+                }
+
+                let mut name = None;
+                let mut role = None;
+                let mut alternate_script = None;
+                let mut file_as = None;
+
+                while let Some(field) = map.next_key()? {
+                    match field {
+                        Field::Name => {
+                            if name.is_some() {
+                                return Err(de::Error::duplicate_field("name"));
+                            }
+                            name = map.next_value().map(Some)?;
+                        }
+                        Field::Role => {
+                            if role.is_some() {
+                                return Err(de::Error::duplicate_field("role"));
+                            }
+                            role = map.next_value().map(Some)?;
+                        }
+                        Field::AlternateScript => {
+                            if alternate_script.is_some() {
+                                return Err(de::Error::duplicate_field("alternate_script"));
+                            }
+                            alternate_script = map.next_value().map(Some)?;
+                        }
+                        Field::FileAs => {
+                            if file_as.is_some() {
+                                return Err(de::Error::duplicate_field("file_as"));
+                            }
+                            file_as = map.next_value().map(Some)?;
+                        }
+                    }
+                }
+
+                let name = name.unwrap_or_default();
+
+                Ok(Creator {
+                    name,
+                    role,
+                    alternate_script,
+                    file_as,
+                })
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
 impl ser::Serialize for Creator {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
+        if self.role.is_none() && self.alternate_script.is_none() && self.file_as.is_none() {
+            serializer.serialize_str(&self.name)
+        } else {
+            let mut map = serializer.serialize_map(None)?;
 
-        map.serialize_entry("name", &self.name)?;
+            map.serialize_entry("name", &self.name)?;
 
-        if let Some(role) = &self.role {
-            map.serialize_entry("role", role)?;
+            if let Some(role) = &self.role {
+                map.serialize_entry("role", role)?;
+            }
+
+            if let Some(alternate_script) = &self.alternate_script {
+                map.serialize_entry("alternateScript", alternate_script)?;
+            }
+
+            if let Some(file_as) = &self.file_as {
+                map.serialize_entry("fileAs", file_as)?;
+            }
+
+            map.end()
         }
-
-        if let Some(alternate_script) = &self.alternate_script {
-            map.serialize_entry("alternateScript", alternate_script)?;
-        }
-
-        if let Some(file_as) = &self.file_as {
-            map.serialize_entry("fileAs", file_as)?;
-        }
-
-        map.end()
     }
 }
 
@@ -879,7 +1096,6 @@ impl<'de> de::Deserialize<'de> for Chapter {
                     }
                 }
 
-                let title = title.unwrap_or_default();
                 let page = page.unwrap_or_default();
                 let cover = cover.unwrap_or_default();
 
@@ -1010,10 +1226,7 @@ mod tests {
             &[
                 Token::Map { len: None },
                 Token::Str("title"),
-                Token::Map { len: None },
-                Token::Str("name"),
                 Token::Str(""),
-                Token::MapEnd,
                 Token::Str("language"),
                 Token::Str(""),
                 Token::Str("identifier"),
@@ -1030,12 +1243,19 @@ mod tests {
 
     #[test]
     fn test_serde_title() {
+        assert_tokens(&Title::default(), &[Token::Str("")]);
+
         assert_tokens(
-            &Title::default(),
+            &Title {
+                title_type: TitleType::Short,
+                ..Title::default()
+            },
             &[
                 Token::Map { len: None },
                 Token::Str("name"),
                 Token::Str(""),
+                Token::Str("type"),
+                Token::Str("short"),
                 Token::MapEnd,
             ],
         );
@@ -1043,12 +1263,19 @@ mod tests {
 
     #[test]
     fn test_serde_creator() {
+        assert_tokens(&Creator::default(), &[Token::Str("")]);
+
         assert_tokens(
-            &Creator::default(),
+            &Creator {
+                role: Some("aut".to_string()),
+                ..Creator::default()
+            },
             &[
                 Token::Map { len: None },
                 Token::Str("name"),
                 Token::Str(""),
+                Token::Str("role"),
+                Token::Str("aut"),
                 Token::MapEnd,
             ],
         );
