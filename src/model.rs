@@ -83,7 +83,10 @@ impl ser::Serialize for Title {
         let mut map = serializer.serialize_map(None)?;
 
         map.serialize_entry("name", &self.name)?;
-        map.serialize_entry("type", &serde_enum::Serialize(&self.title_type))?;
+
+        if !self.title_type.is_default() {
+            map.serialize_entry("type", &serde_enum::Serialize(&self.title_type))?;
+        }
 
         if let Some(alternate_script) = &self.alternate_script {
             map.serialize_entry("alternateScript", alternate_script)?;
@@ -256,10 +259,21 @@ impl ser::Serialize for Rendition {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
 
-        map.serialize_entry("direction", &serde_enum::Serialize(&self.direction))?;
-        map.serialize_entry("layout", &serde_enum::Serialize(&self.layout))?;
-        map.serialize_entry("orientation", &serde_enum::Serialize(&self.orientation))?;
-        map.serialize_entry("spread", &serde_enum::Serialize(&self.spread))?;
+        if !self.direction.is_default() {
+            map.serialize_entry("direction", &serde_enum::Serialize(&self.direction))?;
+        }
+
+        if !self.layout.is_default() {
+            map.serialize_entry("layout", &serde_enum::Serialize(&self.layout))?;
+        }
+
+        if !self.orientation.is_default() {
+            map.serialize_entry("orientation", &serde_enum::Serialize(&self.orientation))?;
+        }
+
+        if !self.spread.is_default() {
+            map.serialize_entry("spread", &serde_enum::Serialize(&self.spread))?;
+        }
 
         if !self.style.is_empty() {
             map.serialize_entry("style", &self.style)?;
@@ -470,6 +484,16 @@ impl ser::Serialize for Page {
     }
 }
 
+trait IsDefault {
+    fn is_default(&self) -> bool;
+}
+
+impl<T: PartialEq + Default> IsDefault for T {
+    fn is_default(&self) -> bool {
+        T::default().eq(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -488,14 +512,6 @@ mod tests {
                 Token::MapEnd,
                 Token::Str("rendition"),
                 Token::Map { len: None },
-                Token::Str("direction"),
-                Token::Str("rtl"),
-                Token::Str("layout"),
-                Token::Str("pre-paginated"),
-                Token::Str("orientation"),
-                Token::Str("auto"),
-                Token::Str("spread"),
-                Token::Str("auto"),
                 Token::MapEnd,
                 Token::MapEnd,
             ],
@@ -523,8 +539,6 @@ mod tests {
                 Token::Map { len: None },
                 Token::Str("name"),
                 Token::Str(""),
-                Token::Str("type"),
-                Token::Str("main"),
                 Token::MapEnd,
             ],
         );
@@ -566,18 +580,7 @@ mod tests {
     fn test_serde_rendition() {
         assert_tokens(
             &Rendition::default(),
-            &[
-                Token::Map { len: None },
-                Token::Str("direction"),
-                Token::Str("rtl"),
-                Token::Str("layout"),
-                Token::Str("pre-paginated"),
-                Token::Str("orientation"),
-                Token::Str("auto"),
-                Token::Str("spread"),
-                Token::Str("auto"),
-                Token::MapEnd,
-            ],
+            &[Token::Map { len: None }, Token::MapEnd],
         );
     }
 
