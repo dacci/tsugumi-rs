@@ -9,11 +9,18 @@ license = "MIT"
 
 [dependencies]
 anyhow = "1.0.66"
+chrono = "0.4.22"
 clap = { version = "4.0.18", features = ["derive"] }
+image = { version = "0.24.4", default-features = false, features = ["gif", "jpeg", "png"] }
+indexmap = "1.9.1"
+mime_guess = "2.0.4"
 serde = { version = "1.0.147", features = ["derive"] }
 serde_yaml = "0.9.14"
+tempfile = "3.3.0"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+xml-rs = "0.8.4"
+zip = { version = "0.6.3", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 serde_test = "1.0.147"
