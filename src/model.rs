@@ -208,6 +208,13 @@ impl<'de> de::Deserialize<'de> for Metadata {
                             title = map
                                 .next_value::<invariable::Deserialize<_>>()
                                 .map(|d| d.unwrap())
+                                .and_then(|v| {
+                                    if v.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(v)
+                                    }
+                                })
                                 .map(Some)?;
                         }
                         Field::Creator => {
@@ -252,7 +259,7 @@ impl<'de> de::Deserialize<'de> for Metadata {
                     }
                 }
 
-                let title = title.unwrap_or_default();
+                let title = title.ok_or_else(|| de::Error::missing_field("title"))?;
                 let creator = creator.unwrap_or_default();
                 let contributor = contributor.unwrap_or_default();
                 let collection = collection.unwrap_or_default();
@@ -279,7 +286,9 @@ impl ser::Serialize for Metadata {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
 
-        if !self.title.is_empty() {
+        if self.title.is_empty() {
+            return Err(ser::Error::custom("title must not be empty"));
+        } else {
             map.serialize_entry("title", &invariable::wrap(&self.title))?;
         }
 
@@ -1163,11 +1172,19 @@ mod tests {
     #[test]
     fn test_serde_book() {
         assert_tokens(
-            &Book::default(),
+            &Book {
+                metadata: Metadata {
+                    title: vec![Title::default()],
+                    ..Metadata::default()
+                },
+                ..Book::default()
+            },
             &[
                 Token::Map { len: None },
                 Token::Str("metadata"),
                 Token::Map { len: None },
+                Token::Str("title"),
+                Token::Str(""),
                 Token::Str("language"),
                 Token::Str(""),
                 Token::Str("identifier"),
@@ -1182,6 +1199,10 @@ mod tests {
 
         assert_tokens(
             &Book {
+                metadata: Metadata {
+                    title: vec![Title::default()],
+                    ..Metadata::default()
+                },
                 chapter: vec![Chapter::default()],
                 ..Book::default()
             },
@@ -1189,6 +1210,8 @@ mod tests {
                 Token::Map { len: None },
                 Token::Str("metadata"),
                 Token::Map { len: None },
+                Token::Str("title"),
+                Token::Str(""),
                 Token::Str("language"),
                 Token::Str(""),
                 Token::Str("identifier"),
@@ -1207,37 +1230,15 @@ mod tests {
 
     #[test]
     fn test_serde_metadata() {
-        assert_tokens(
+        assert_ser_tokens_error(
             &Metadata::default(),
-            &[
-                Token::Map { len: None },
-                Token::Str("language"),
-                Token::Str(""),
-                Token::Str("identifier"),
-                Token::Str(""),
-                Token::MapEnd,
-            ],
-        );
-        assert_tokens(
-            &Metadata {
-                title: vec![Title::default()],
-                ..Metadata::default()
-            },
-            &[
-                Token::Map { len: None },
-                Token::Str("title"),
-                Token::Str(""),
-                Token::Str("language"),
-                Token::Str(""),
-                Token::Str("identifier"),
-                Token::Str(""),
-                Token::MapEnd,
-            ],
+            &[Token::Map { len: None }],
+            "title must not be empty",
         );
 
         assert_de_tokens_error::<Metadata>(
             &[Token::Map { len: Some(0) }, Token::MapEnd],
-            "missing field `language`",
+            "missing field `title`",
         );
     }
 
