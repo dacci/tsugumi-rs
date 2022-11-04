@@ -995,13 +995,99 @@ impl AsRef<str> for Spread {
     }
 }
 
-#[derive(Debug, Default, serde::Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields, default)]
+#[derive(Debug, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Style {
     pub link: bool,
     pub href: String,
     pub src: String,
+}
+
+impl<'de> de::Deserialize<'de> for Style {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Style;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a map")
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                enum Field {
+                    Link,
+                    Href,
+                    Src,
+                }
+
+                impl<'de> de::Deserialize<'de> for Field {
+                    fn deserialize<D: de::Deserializer<'de>>(
+                        deserializer: D,
+                    ) -> Result<Self, D::Error> {
+                        struct Visitor;
+
+                        impl<'de> de::Visitor<'de> for Visitor {
+                            type Value = Field;
+
+                            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                                formatter.write_str("an identifier")
+                            }
+
+                            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                                match v {
+                                    "link" => Ok(Field::Link),
+                                    "href" => Ok(Field::Href),
+                                    "src" => Ok(Field::Src),
+                                    field => Err(de::Error::unknown_field(
+                                        field,
+                                        &["link", "href", "src"],
+                                    )),
+                                }
+                            }
+                        }
+
+                        deserializer.deserialize_identifier(Visitor)
+                    }
+                }
+
+                let mut link = None;
+                let mut href = None;
+                let mut src = None;
+
+                while let Some(field) = map.next_key()? {
+                    match field {
+                        Field::Link => {
+                            if link.is_some() {
+                                return Err(de::Error::duplicate_field("link"));
+                            }
+                            link = map.next_value().map(Some)?;
+                        }
+                        Field::Href => {
+                            if href.is_some() {
+                                return Err(de::Error::duplicate_field("href"));
+                            }
+                            href = map.next_value().map(Some)?;
+                        }
+                        Field::Src => {
+                            if src.is_some() {
+                                return Err(de::Error::duplicate_field("src"));
+                            }
+                            src = map.next_value().map(Some)?;
+                        }
+                    }
+                }
+
+                let link = link.unwrap_or_default();
+                let href = href.ok_or_else(|| de::Error::missing_field("href"))?;
+                let src = src.ok_or_else(|| de::Error::missing_field("src"))?;
+
+                Ok(Style { link, href, src })
+            }
+        }
+
+        deserializer.deserialize_map(Visitor)
+    }
 }
 
 impl ser::Serialize for Style {
@@ -1338,6 +1424,11 @@ mod tests {
                 Token::Str(""),
                 Token::MapEnd,
             ],
+        );
+
+        assert_de_tokens_error::<Style>(
+            &[Token::Map { len: None }, Token::MapEnd],
+            "missing field `href`",
         );
     }
 
