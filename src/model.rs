@@ -1299,7 +1299,7 @@ impl ser::Serialize for Style {
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Chapter {
-    pub title: Option<String>,
+    pub name: Option<String>,
     pub page: Vec<Page>,
     pub cover: bool,
 }
@@ -1317,7 +1317,7 @@ impl<'de> de::Deserialize<'de> for Chapter {
 
             fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
                 enum Field {
-                    Title,
+                    Name,
                     Page,
                     Cover,
                 }
@@ -1337,12 +1337,12 @@ impl<'de> de::Deserialize<'de> for Chapter {
 
                             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
                                 match v {
-                                    "title" => Ok(Field::Title),
+                                    "name" => Ok(Field::Name),
                                     "page" => Ok(Field::Page),
                                     "cover" => Ok(Field::Cover),
                                     field => Err(de::Error::unknown_field(
                                         field,
-                                        &["title", "page", "cover"],
+                                        &["name", "page", "cover"],
                                     )),
                                 }
                             }
@@ -1352,17 +1352,17 @@ impl<'de> de::Deserialize<'de> for Chapter {
                     }
                 }
 
-                let mut title = None;
+                let mut name = None;
                 let mut page = None;
                 let mut cover = None;
 
                 while let Some(field) = map.next_key()? {
                     match field {
-                        Field::Title => {
-                            if title.is_some() {
-                                return Err(de::Error::duplicate_field("title"));
+                        Field::Name => {
+                            if name.is_some() {
+                                return Err(de::Error::duplicate_field("name"));
                             }
-                            title = map.next_value().map(Some)?;
+                            name = map.next_value().map(Some)?;
                         }
                         Field::Page => {
                             if page.is_some() {
@@ -1392,7 +1392,7 @@ impl<'de> de::Deserialize<'de> for Chapter {
                 let page = page.ok_or_else(|| de::Error::missing_field("page"))?;
                 let cover = cover.unwrap_or_default();
 
-                Ok(Chapter { title, page, cover })
+                Ok(Chapter { name, page, cover })
             }
         }
 
@@ -1404,8 +1404,8 @@ impl ser::Serialize for Chapter {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
 
-        if let Some(title) = &self.title {
-            map.serialize_entry("title", title)?;
+        if let Some(name) = &self.name {
+            map.serialize_entry("name", name)?;
         }
 
         if !self.page.is_empty() {

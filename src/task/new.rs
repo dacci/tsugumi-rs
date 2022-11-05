@@ -78,12 +78,12 @@ pub(super) fn main(args: Args) -> Result<()> {
 fn create_chapter(title: Option<&str>, files: &[PathBuf]) -> Vec<Chapter> {
     let mut iter = files.iter().map(|src| Page { src: src.clone() });
     let cover = iter.next().map(|page| Chapter {
-        title: Some("表紙".to_string()),
+        name: Some("表紙".to_string()),
         page: vec![page],
         cover: true,
     });
     let pages = Chapter {
-        title: title.map(|s| s.to_string()),
+        name: title.map(|s| s.to_string()),
         page: iter.collect::<Vec<_>>(),
         ..Default::default()
     };
@@ -105,7 +105,7 @@ mod tests {
         assert_eq!(
             iter.next(),
             Some(Chapter {
-                title: Some("表紙".to_string()),
+                name: Some("表紙".to_string()),
                 page: vec![Page {
                     src: "cover".into()
                 }],
@@ -115,7 +115,7 @@ mod tests {
         assert_eq!(
             iter.next(),
             Some(Chapter {
-                title: Some("title".to_string()),
+                name: Some("title".to_string()),
                 page: vec![
                     Page {
                         src: "page1".into()
@@ -136,7 +136,7 @@ mod tests {
         assert_eq!(
             iter.next(),
             Some(Chapter {
-                title: Some("表紙".to_string()),
+                name: Some("表紙".to_string()),
                 page: vec![Page {
                     src: "cover".into()
                 }],

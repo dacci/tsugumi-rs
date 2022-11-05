@@ -317,7 +317,7 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "title": {
+        "name": {
           "type": "string"
         },
         "page": {

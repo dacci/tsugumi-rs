@@ -148,7 +148,7 @@ impl Builder {
     fn build_chapter(&self, cx: &mut Context, chapter: &Chapter) -> Result<()> {
         info!(
             "building chapter {}",
-            chapter.title.as_deref().unwrap_or("(untitled)")
+            chapter.name.as_deref().unwrap_or("(untitled)")
         );
 
         let mut first = true;
@@ -157,8 +157,8 @@ impl Builder {
             if first {
                 first = false;
 
-                if let Some(title) = &chapter.title {
-                    cx.toc.insert(title.clone(), id);
+                if let Some(name) = &chapter.name {
+                    cx.toc.insert(name.clone(), id);
                 }
             }
         }
