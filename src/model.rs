@@ -85,6 +85,13 @@ impl<'de> de::Deserialize<'de> for Book {
                             chapter = map
                                 .next_value::<invariable::Deserialize<_>>()
                                 .map(|d| d.unwrap())
+                                .and_then(|v| {
+                                    if v.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(v)
+                                    }
+                                })
                                 .map(Some)?;
                         }
                     }
@@ -92,7 +99,7 @@ impl<'de> de::Deserialize<'de> for Book {
 
                 let metadata = metadata.ok_or_else(|| de::Error::missing_field("metadata"))?;
                 let rendition = rendition.unwrap_or_default();
-                let chapter = chapter.unwrap_or_default();
+                let chapter = chapter.ok_or_else(|| de::Error::missing_field("chapter"))?;
 
                 Ok(Book {
                     metadata,
@@ -113,7 +120,9 @@ impl ser::Serialize for Book {
         map.serialize_entry("metadata", &self.metadata)?;
         map.serialize_entry("rendition", &self.rendition)?;
 
-        if !self.chapter.is_empty() {
+        if self.chapter.is_empty() {
+            return Err(ser::Error::custom("chapter must not be empty"));
+        } else {
             map.serialize_entry("chapter", &invariable::wrap(&self.chapter))?;
         }
 
@@ -248,13 +257,31 @@ impl<'de> de::Deserialize<'de> for Metadata {
                             if language.is_some() {
                                 return Err(de::Error::duplicate_field("language"));
                             }
-                            language = map.next_value().map(Some)?;
+                            language = map
+                                .next_value()
+                                .and_then(|s: String| {
+                                    if s.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(s)
+                                    }
+                                })
+                                .map(Some)?;
                         }
                         Field::Identifier => {
                             if identifier.is_some() {
                                 return Err(de::Error::duplicate_field("identifier"));
                             }
-                            identifier = map.next_value().map(Some)?;
+                            identifier = map
+                                .next_value()
+                                .and_then(|s: String| {
+                                    if s.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(s)
+                                    }
+                                })
+                                .map(Some)?;
                         }
                     }
                 }
@@ -304,8 +331,17 @@ impl ser::Serialize for Metadata {
             map.serialize_entry("collection", &invariable::wrap(&self.collection))?;
         }
 
-        map.serialize_entry("language", &self.language)?;
-        map.serialize_entry("identifier", &self.identifier)?;
+        if self.language.is_empty() {
+            return Err(ser::Error::custom("language must not be empty"));
+        } else {
+            map.serialize_entry("language", &self.language)?;
+        }
+
+        if self.identifier.is_empty() {
+            return Err(ser::Error::custom("identifier must not be empty"));
+        } else {
+            map.serialize_entry("identifier", &self.identifier)?;
+        }
 
         map.end()
     }
@@ -332,10 +368,14 @@ impl<'de> de::Deserialize<'de> for Title {
             }
 
             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                Ok(Title {
-                    name: v.to_string(),
-                    ..Title::default()
-                })
+                if v.is_empty() {
+                    Err(de::Error::invalid_length(0, &"at least 1"))
+                } else {
+                    Ok(Title {
+                        name: v.to_string(),
+                        ..Title::default()
+                    })
+                }
             }
 
             fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
@@ -388,7 +428,16 @@ impl<'de> de::Deserialize<'de> for Title {
                             if name.is_some() {
                                 return Err(de::Error::duplicate_field("name"));
                             }
-                            name = map.next_value().map(Some)?;
+                            name = map
+                                .next_value()
+                                .and_then(|s: String| {
+                                    if s.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(s)
+                                    }
+                                })
+                                .map(Some)?;
                         }
                         Field::TitleType => {
                             if title_type.is_some() {
@@ -432,6 +481,10 @@ impl<'de> de::Deserialize<'de> for Title {
 
 impl ser::Serialize for Title {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.name.is_empty() {
+            return Err(ser::Error::custom("name must not be empty"));
+        }
+
         if self.title_type.is_default() && self.alternate_script.is_none() && self.file_as.is_none()
         {
             serializer.serialize_str(&self.name)
@@ -528,10 +581,14 @@ impl<'de> de::Deserialize<'de> for Creator {
             }
 
             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                Ok(Creator {
-                    name: v.to_string(),
-                    ..Creator::default()
-                })
+                if v.is_empty() {
+                    Err(de::Error::invalid_length(0, &"at least 1"))
+                } else {
+                    Ok(Creator {
+                        name: v.to_string(),
+                        ..Creator::default()
+                    })
+                }
             }
 
             fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
@@ -581,7 +638,16 @@ impl<'de> de::Deserialize<'de> for Creator {
                             if name.is_some() {
                                 return Err(de::Error::duplicate_field("name"));
                             }
-                            name = map.next_value().map(Some)?;
+                            name = map
+                                .next_value()
+                                .and_then(|s: String| {
+                                    if s.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(s)
+                                    }
+                                })
+                                .map(Some)?;
                         }
                         Field::Role => {
                             if role.is_some() {
@@ -621,6 +687,10 @@ impl<'de> de::Deserialize<'de> for Creator {
 
 impl ser::Serialize for Creator {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.name.is_empty() {
+            return Err(ser::Error::custom("name must not be empty"));
+        }
+
         if self.role.is_none() && self.alternate_script.is_none() && self.file_as.is_none() {
             serializer.serialize_str(&self.name)
         } else {
@@ -645,20 +715,123 @@ impl ser::Serialize for Creator {
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Collection {
     pub name: String,
-
-    #[serde(rename = "type", with = "serde_enum")]
     pub collection_type: CollectionType,
-
     pub position: Option<u32>,
+}
+
+impl<'de> de::Deserialize<'de> for Collection {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Collection;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a map")
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                enum Field {
+                    Name,
+                    Type,
+                    Position,
+                }
+
+                impl<'de> de::Deserialize<'de> for Field {
+                    fn deserialize<D: de::Deserializer<'de>>(
+                        deserializer: D,
+                    ) -> Result<Self, D::Error> {
+                        struct Visitor;
+
+                        impl<'de> de::Visitor<'de> for Visitor {
+                            type Value = Field;
+
+                            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                                formatter.write_str("an identifier")
+                            }
+
+                            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                                match v {
+                                    "name" => Ok(Field::Name),
+                                    "type" => Ok(Field::Type),
+                                    "position" => Ok(Field::Position),
+                                    field => Err(de::Error::unknown_field(
+                                        field,
+                                        &["name", "type", "position"],
+                                    )),
+                                }
+                            }
+                        }
+
+                        deserializer.deserialize_identifier(Visitor)
+                    }
+                }
+
+                let mut name = None;
+                let mut collection_type = None;
+                let mut position = None;
+
+                while let Some(field) = map.next_key()? {
+                    match field {
+                        Field::Name => {
+                            if name.is_some() {
+                                return Err(de::Error::duplicate_field("name"));
+                            }
+                            name = map
+                                .next_value()
+                                .and_then(|s: String| {
+                                    if s.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(s)
+                                    }
+                                })
+                                .map(Some)?;
+                        }
+                        Field::Type => {
+                            if collection_type.is_some() {
+                                return Err(de::Error::duplicate_field("type"));
+                            }
+                            collection_type = map
+                                .next_value::<serde_enum::Deserialize<_>>()
+                                .map(|d| d.unwrap())
+                                .map(Some)?;
+                        }
+                        Field::Position => {
+                            if position.is_some() {
+                                return Err(de::Error::duplicate_field("position"));
+                            }
+                            position = map.next_value().map(Some)?;
+                        }
+                    }
+                }
+
+                let name = name.unwrap_or_default();
+                let collection_type =
+                    collection_type.ok_or_else(|| de::Error::missing_field("type"))?;
+
+                Ok(Collection {
+                    name,
+                    collection_type,
+                    position,
+                })
+            }
+        }
+
+        deserializer.deserialize_map(Visitor)
+    }
 }
 
 impl ser::Serialize for Collection {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.name.is_empty() {
+            return Err(ser::Error::custom("name must not be empty"));
+        }
+
         let mut map = serializer.serialize_map(None)?;
 
         map.serialize_entry("name", &self.name)?;
@@ -1067,13 +1240,31 @@ impl<'de> de::Deserialize<'de> for Style {
                             if href.is_some() {
                                 return Err(de::Error::duplicate_field("href"));
                             }
-                            href = map.next_value().map(Some)?;
+                            href = map
+                                .next_value()
+                                .and_then(|s: String| {
+                                    if s.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(s)
+                                    }
+                                })
+                                .map(Some)?;
                         }
                         Field::Src => {
                             if src.is_some() {
                                 return Err(de::Error::duplicate_field("src"));
                             }
-                            src = map.next_value().map(Some)?;
+                            src = map
+                                .next_value()
+                                .and_then(|s: String| {
+                                    if s.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(s)
+                                    }
+                                })
+                                .map(Some)?;
                         }
                     }
                 }
@@ -1180,6 +1371,13 @@ impl<'de> de::Deserialize<'de> for Chapter {
                             page = map
                                 .next_value::<invariable::Deserialize<_>>()
                                 .map(|d| d.unwrap())
+                                .and_then(|v| {
+                                    if v.is_empty() {
+                                        Err(de::Error::invalid_length(0, &"at least 1"))
+                                    } else {
+                                        Ok(v)
+                                    }
+                                })
                                 .map(Some)?;
                         }
                         Field::Cover => {
@@ -1191,7 +1389,7 @@ impl<'de> de::Deserialize<'de> for Chapter {
                     }
                 }
 
-                let page = page.unwrap_or_default();
+                let page = page.ok_or_else(|| de::Error::missing_field("page"))?;
                 let cover = cover.unwrap_or_default();
 
                 Ok(Chapter { title, page, cover })
@@ -1230,13 +1428,35 @@ pub struct Page {
 
 impl<'de> de::Deserialize<'de> for Page {
     fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        <PathBuf as de::Deserialize>::deserialize(deserializer).map(|src| Page { src })
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Page;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a string")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                if v.is_empty() {
+                    Err(de::Error::invalid_length(0, &"at least 1"))
+                } else {
+                    Ok(Page { src: v.into() })
+                }
+            }
+        }
+
+        deserializer.deserialize_str(Visitor)
     }
 }
 
 impl ser::Serialize for Page {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        ser::Serialize::serialize(&self.src, serializer)
+        if self.src.is_default() {
+            Err(ser::Error::custom("page must not be empty"))
+        } else {
+            ser::Serialize::serialize(&self.src, serializer)
+        }
     }
 }
 
@@ -1260,9 +1480,20 @@ mod tests {
         assert_tokens(
             &Book {
                 metadata: Metadata {
-                    title: vec![Title::default()],
+                    title: vec![Title {
+                        name: "Title".to_string(),
+                        ..Title::default()
+                    }],
+                    language: "ja".to_string(),
+                    identifier: "id".to_string(),
                     ..Metadata::default()
                 },
+                chapter: vec![Chapter {
+                    page: vec![Page {
+                        src: "cover.jpg".into(),
+                    }],
+                    ..Chapter::default()
+                }],
                 ..Book::default()
             },
             &[
@@ -1270,44 +1501,19 @@ mod tests {
                 Token::Str("metadata"),
                 Token::Map { len: None },
                 Token::Str("title"),
-                Token::Str(""),
+                Token::Str("Title"),
                 Token::Str("language"),
-                Token::Str(""),
+                Token::Str("ja"),
                 Token::Str("identifier"),
-                Token::Str(""),
-                Token::MapEnd,
-                Token::Str("rendition"),
-                Token::Map { len: None },
-                Token::MapEnd,
-                Token::MapEnd,
-            ],
-        );
-
-        assert_tokens(
-            &Book {
-                metadata: Metadata {
-                    title: vec![Title::default()],
-                    ..Metadata::default()
-                },
-                chapter: vec![Chapter::default()],
-                ..Book::default()
-            },
-            &[
-                Token::Map { len: None },
-                Token::Str("metadata"),
-                Token::Map { len: None },
-                Token::Str("title"),
-                Token::Str(""),
-                Token::Str("language"),
-                Token::Str(""),
-                Token::Str("identifier"),
-                Token::Str(""),
+                Token::Str("id"),
                 Token::MapEnd,
                 Token::Str("rendition"),
                 Token::Map { len: None },
                 Token::MapEnd,
                 Token::Str("chapter"),
                 Token::Map { len: None },
+                Token::Str("page"),
+                Token::Str("cover.jpg"),
                 Token::MapEnd,
                 Token::MapEnd,
             ],
@@ -1330,17 +1536,16 @@ mod tests {
 
     #[test]
     fn test_serde_title() {
-        assert_tokens(&Title::default(), &[Token::Str("")]);
-
         assert_tokens(
             &Title {
+                name: "Name".to_string(),
                 title_type: TitleType::Short,
                 ..Title::default()
             },
             &[
                 Token::Map { len: None },
                 Token::Str("name"),
-                Token::Str(""),
+                Token::Str("Name"),
                 Token::Str("type"),
                 Token::Str("short"),
                 Token::MapEnd,
@@ -1350,17 +1555,24 @@ mod tests {
 
     #[test]
     fn test_serde_creator() {
-        assert_tokens(&Creator::default(), &[Token::Str("")]);
+        assert_tokens(
+            &Creator {
+                name: "Name".to_string(),
+                ..Creator::default()
+            },
+            &[Token::Str("Name")],
+        );
 
         assert_tokens(
             &Creator {
+                name: "Name".to_string(),
                 role: Some("aut".to_string()),
                 ..Creator::default()
             },
             &[
                 Token::Map { len: None },
                 Token::Str("name"),
-                Token::Str(""),
+                Token::Str("Name"),
                 Token::Str("role"),
                 Token::Str("aut"),
                 Token::MapEnd,
@@ -1372,14 +1584,14 @@ mod tests {
     fn test_serde_collection() {
         assert_tokens(
             &Collection {
-                name: Default::default(),
+                name: "Name".to_string(),
                 collection_type: CollectionType::Series,
                 position: Default::default(),
             },
             &[
                 Token::Map { len: None },
                 Token::Str("name"),
-                Token::Str(""),
+                Token::Str("Name"),
                 Token::Str("type"),
                 Token::Str("series"),
                 Token::MapEnd,
@@ -1395,7 +1607,11 @@ mod tests {
         );
         assert_tokens(
             &Rendition {
-                style: vec![Style::default()],
+                style: vec![Style {
+                    link: false,
+                    href: "Href".to_string(),
+                    src: "Src".to_string(),
+                }],
                 ..Rendition::default()
             },
             &[
@@ -1403,9 +1619,9 @@ mod tests {
                 Token::Str("style"),
                 Token::Map { len: None },
                 Token::Str("href"),
-                Token::Str(""),
+                Token::Str("Href"),
                 Token::Str("src"),
-                Token::Str(""),
+                Token::Str("Src"),
                 Token::MapEnd,
                 Token::MapEnd,
             ],
@@ -1414,18 +1630,6 @@ mod tests {
 
     #[test]
     fn test_serde_style() {
-        assert_tokens(
-            &Style::default(),
-            &[
-                Token::Map { len: None },
-                Token::Str("href"),
-                Token::Str(""),
-                Token::Str("src"),
-                Token::Str(""),
-                Token::MapEnd,
-            ],
-        );
-
         assert_de_tokens_error::<Style>(
             &[Token::Map { len: None }, Token::MapEnd],
             "missing field `href`",
@@ -1435,18 +1639,14 @@ mod tests {
     #[test]
     fn test_serde_chapter() {
         assert_tokens(
-            &Chapter::default(),
-            &[Token::Map { len: None }, Token::MapEnd],
-        );
-        assert_tokens(
             &Chapter {
-                page: vec![Page::default()],
+                page: vec![Page { src: "page".into() }],
                 ..Chapter::default()
             },
             &[
                 Token::Map { len: None },
                 Token::Str("page"),
-                Token::Str(""),
+                Token::Str("page"),
                 Token::MapEnd,
             ],
         );
@@ -1455,6 +1655,8 @@ mod tests {
     #[test]
     fn test_serde_page() {
         assert_tokens(&Page { src: "path".into() }, &[Token::Str("path")]);
+
+        assert_ser_tokens_error(&Page::default(), &[], "page must not be empty");
     }
 }
 
