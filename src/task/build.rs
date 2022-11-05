@@ -158,7 +158,7 @@ impl Builder {
                 first = false;
 
                 if let Some(name) = &chapter.name {
-                    cx.toc.insert(name.clone(), id);
+                    cx.toc.insert(id, name.clone());
                 }
             }
         }
@@ -789,7 +789,7 @@ impl Context {
 
         w.write(XmlEvent::start_element("ol"))?;
 
-        for (title, id) in &self.toc {
+        for (id, title) in &self.toc {
             let item = self.manifest.get(id).unwrap();
 
             w.write(XmlEvent::start_element("li"))?;
