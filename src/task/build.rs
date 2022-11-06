@@ -400,17 +400,7 @@ impl Context {
     }
 
     fn write_to(&self, path: impl AsRef<Path>) -> Result<()> {
-        let author = self
-            .book
-            .metadata
-            .creator
-            .iter()
-            .find(|c| c.role.as_ref().map(|r| r == "aut").unwrap_or_default())
-            .or_else(|| self.book.metadata.creator.first())
-            .map(|c| format!(" - {}", c.name))
-            .unwrap_or_default();
-
-        let path = path.as_ref().join(format!("{}{}.epub", self.title, author));
+        let path = path.as_ref().join(format!("{}.epub", self.title));
         let file = File::create(path)?;
         let mut zip = ZipWriter::new(file);
 
