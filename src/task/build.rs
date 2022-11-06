@@ -1,4 +1,4 @@
-use crate::model::{Book, Chapter, Page, TitleType};
+use crate::model::{Book, Chapter, Orientation, Page, TitleType};
 use anyhow::{anyhow, Context as _, Result};
 use chrono::{SecondsFormat, Utc};
 use indexmap::IndexMap as Map;
@@ -7,7 +7,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use tempfile::{NamedTempFile, TempPath};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 use zip::write::FileOptions;
@@ -178,6 +178,16 @@ impl Builder {
                 image::open(&src).with_context(|| format!("failed to read {}", src.display()))?;
             (img.width(), img.height())
         };
+
+        match self.book.rendition.orientation {
+            Orientation::Landscape if width < height => {
+                warn!("`{}` is a portrait page", page.src.display())
+            }
+            Orientation::Portrait if height < width => {
+                warn!("`{}` is a landscape page", page.src.display())
+            }
+            _ => {}
+        }
 
         let id = cx.add_image(src.as_path(), chapter.cover);
         let image = cx.manifest.get(&id).unwrap();
