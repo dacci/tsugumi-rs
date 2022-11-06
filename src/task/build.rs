@@ -7,7 +7,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use tempfile::{NamedTempFile, TempPath};
-use tracing::info;
+use tracing::{debug, info};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 use zip::write::FileOptions;
@@ -122,6 +122,8 @@ impl Builder {
     }
 
     fn build_style(&self, cx: &mut Context) -> Result<()> {
+        info!("building style");
+
         for (style, seq) in self.book.rendition.style.iter().zip(1..) {
             let mut file = NamedTempFile::new()?;
             file.write_all(style.src.as_bytes())?;
@@ -167,7 +169,7 @@ impl Builder {
     }
 
     fn build_page(&self, cx: &mut Context, chapter: &Chapter, page: &Page) -> Result<String> {
-        info!("building page from {}", page.src.display());
+        debug!("building page from {}", page.src.display());
 
         let src = self.root.join(&page.src);
 
@@ -407,9 +409,8 @@ impl Context {
         self.write_package(&mut zip)?;
         self.write_navigation(&mut zip)?;
 
-        for (id, item) in &self.manifest {
-            info!("writing item {}", id);
-
+        info!("writing items");
+        for (_, item) in &self.manifest {
             zip.start_file(format!("item/{}", item.href), FileOptions::default())?;
             let mut file = File::open(&item.src)?;
             std::io::copy(&mut file, &mut zip)?;
