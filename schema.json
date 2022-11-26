@@ -1,0 +1,347 @@
+{
+  "$ref": "#/definitions/Book",
+  "definitions": {
+    "Book": {
+      "type": "object",
+      "required": [
+        "metadata",
+        "chapter"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/Metadata"
+        },
+        "rendition": {
+          "$ref": "#/definitions/Rendition"
+        },
+        "chapter": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/Chapter"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/Chapter"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Metadata": {
+      "type": "object",
+      "required": [
+        "title",
+        "language",
+        "identifier"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/TitleName"
+            },
+            {
+              "$ref": "#/definitions/Title"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/TitleName"
+                  },
+                  {
+                    "$ref": "#/definitions/Title"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "creator": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/CreatorName"
+            },
+            {
+              "$ref": "#/definitions/Creator"
+            },
+            {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/CreatorName"
+                  },
+                  {
+                    "$ref": "#/definitions/Creator"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "contributor": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/CreatorName"
+            },
+            {
+              "$ref": "#/definitions/Creator"
+            },
+            {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/CreatorName"
+                  },
+                  {
+                    "$ref": "#/definitions/Creator"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "collection": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/Collection"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Collection"
+              }
+            }
+          ]
+        },
+        "language": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "TitleName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Title": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/TitleName"
+        },
+        "type": {
+          "$ref": "#/definitions/TitleType"
+        },
+        "alternateScript": {
+          "type": "string"
+        },
+        "fileAs": {
+          "type": "string"
+        }
+      }
+    },
+    "TitleType": {
+      "type": "string",
+      "enum": [
+        "main",
+        "subtitle",
+        "short",
+        "collection",
+        "edition",
+        "expanded"
+      ],
+      "default": "main"
+    },
+    "CreatorName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Creator": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/CreatorName"
+        },
+        "role": {
+          "type": "string"
+        },
+        "alternateScript": {
+          "type": "string"
+        },
+        "fileAs": {
+          "type": "string"
+        }
+      }
+    },
+    "Collection": {
+      "type": "object",
+      "required": [
+        "name",
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "$ref": "#/definitions/CollectionType"
+        },
+        "position": {
+          "type": "integer"
+        }
+      }
+    },
+    "CollectionType": {
+      "type": "string",
+      "enum": [
+        "series",
+        "set"
+      ]
+    },
+    "Rendition": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "$ref": "#/definitions/Direction"
+        },
+        "layout": {
+          "$ref": "#/definitions/Layout"
+        },
+        "orientation": {
+          "$ref": "#/definitions/Orientation"
+        },
+        "spread": {
+          "$ref": "#/definitions/Spread"
+        },
+        "style": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/Style"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Style"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Direction": {
+      "type": "string",
+      "enum": [
+        "rtl",
+        "ltr"
+      ],
+      "default": "rtl"
+    },
+    "Layout": {
+      "type": "string",
+      "enum": [
+        "reflowable",
+        "pre-paginated"
+      ],
+      "default": "pre-paginated"
+    },
+    "Orientation": {
+      "type": "string",
+      "enum": [
+        "landscape",
+        "portrait",
+        "auto"
+      ],
+      "default": "auto"
+    },
+    "Spread": {
+      "type": "string",
+      "enum": [
+        "none",
+        "landscape",
+        "both",
+        "auto"
+      ],
+      "default": "auto"
+    },
+    "Style": {
+      "type": "object",
+      "required": [
+        "href",
+        "src"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "link": {
+          "type": "boolean"
+        },
+        "href": {
+          "type": "string",
+          "minLength": 1
+        },
+        "src": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Chapter": {
+      "type": "object",
+      "required": [
+        "page"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "page": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/Page"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/Page"
+              }
+            }
+          ]
+        },
+        "cover": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Page": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
