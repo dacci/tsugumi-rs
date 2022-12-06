@@ -1,12 +1,12 @@
 use crate::model::{Book, Chapter, Orientation, Page, TitleType};
 use anyhow::{anyhow, Context as _, Result};
-use chrono::{SecondsFormat, Utc};
 use indexmap::IndexMap as Map;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use tempfile::{NamedTempFile, TempPath};
+use time::{format_description::well_known::Iso8601, OffsetDateTime};
 use tracing::{debug, info, warn};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
@@ -664,7 +664,7 @@ impl Context {
 
         w.write(XmlEvent::start_element("meta").attr("property", "dcterms:modified"))?;
         w.write(XmlEvent::characters(
-            &Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
+            &OffsetDateTime::now_utc().format(&Iso8601::DEFAULT).unwrap(),
         ))?;
         w.write(XmlEvent::end_element())?;
 
