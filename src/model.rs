@@ -36,7 +36,7 @@ impl<'de> de::Deserialize<'de> for Book {
                     ) -> Result<Self, D::Error> {
                         struct Visitor;
 
-                        impl<'de> de::Visitor<'de> for Visitor {
+                        impl de::Visitor<'_> for Visitor {
                             type Value = Field;
 
                             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -168,7 +168,7 @@ impl<'de> de::Deserialize<'de> for Metadata {
                     ) -> Result<Self, D::Error> {
                         struct Visitor;
 
-                        impl<'de> de::Visitor<'de> for Visitor {
+                        impl de::Visitor<'_> for Visitor {
                             type Value = Field;
 
                             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -392,7 +392,7 @@ impl<'de> de::Deserialize<'de> for Title {
                     ) -> Result<Self, D::Error> {
                         struct Visitor;
 
-                        impl<'de> de::Visitor<'de> for Visitor {
+                        impl de::Visitor<'_> for Visitor {
                             type Value = Field;
 
                             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -605,7 +605,7 @@ impl<'de> de::Deserialize<'de> for Creator {
                     ) -> Result<Self, D::Error> {
                         struct Visitor;
 
-                        impl<'de> de::Visitor<'de> for Visitor {
+                        impl de::Visitor<'_> for Visitor {
                             type Value = Field;
 
                             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -747,7 +747,7 @@ impl<'de> de::Deserialize<'de> for Collection {
                     ) -> Result<Self, D::Error> {
                         struct Visitor;
 
-                        impl<'de> de::Visitor<'de> for Visitor {
+                        impl de::Visitor<'_> for Visitor {
                             type Value = Field;
 
                             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -908,7 +908,7 @@ impl<'de> de::Deserialize<'de> for Rendition {
                     ) -> Result<Self, D::Error> {
                         struct Visitor;
 
-                        impl<'de> de::Visitor<'de> for Visitor {
+                        impl de::Visitor<'_> for Visitor {
                             type Value = Field;
 
                             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -1200,7 +1200,7 @@ impl<'de> de::Deserialize<'de> for Style {
                     ) -> Result<Self, D::Error> {
                         struct Visitor;
 
-                        impl<'de> de::Visitor<'de> for Visitor {
+                        impl de::Visitor<'_> for Visitor {
                             type Value = Field;
 
                             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -1328,7 +1328,7 @@ impl<'de> de::Deserialize<'de> for Chapter {
                     ) -> Result<Self, D::Error> {
                         struct Visitor;
 
-                        impl<'de> de::Visitor<'de> for Visitor {
+                        impl de::Visitor<'_> for Visitor {
                             type Value = Field;
 
                             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -1430,7 +1430,7 @@ impl<'de> de::Deserialize<'de> for Page {
     fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Visitor;
 
-        impl<'de> de::Visitor<'de> for Visitor {
+        impl de::Visitor<'_> for Visitor {
             type Value = Page;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -1669,7 +1669,7 @@ mod serde_enum {
 
     struct Visitor<T>(PhantomData<T>);
 
-    impl<'de, T> de::Visitor<'de> for Visitor<T>
+    impl<T> de::Visitor<'_> for Visitor<T>
     where
         T: FromStr,
         T::Err: Error,
@@ -1952,12 +1952,12 @@ mod invariable {
         #[test]
         fn test_ser() {
             assert_ser_tokens(
-                &Serialize::<i32>(&vec![]),
+                &Serialize::<i32>(&[]),
                 &[Token::Seq { len: Some(0) }, Token::SeqEnd],
             );
-            assert_ser_tokens(&Serialize(&vec![1]), &[Token::I32(1)]);
+            assert_ser_tokens(&Serialize(&[1]), &[Token::I32(1)]);
             assert_ser_tokens(
-                &Serialize(&vec![1, 2]),
+                &Serialize(&[1, 2]),
                 &[
                     Token::Seq { len: Some(2) },
                     Token::I32(1),

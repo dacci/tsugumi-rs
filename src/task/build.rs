@@ -10,7 +10,7 @@ use time::{format_description::well_known::Iso8601, OffsetDateTime};
 use tracing::{debug, info, warn};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
-use zip::write::FileOptions;
+use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
 #[derive(clap::Args)]
@@ -411,7 +411,7 @@ impl Context {
 
         info!("writing items");
         for (_, item) in &self.manifest {
-            zip.start_file(format!("item/{}", item.href), FileOptions::default())?;
+            zip.start_file(format!("item/{}", item.href), SimpleFileOptions::default())?;
             let mut file = File::open(&item.src)?;
             std::io::copy(&mut file, &mut zip)?;
         }
@@ -424,7 +424,7 @@ impl Context {
 
         zip.start_file(
             "mimetype",
-            FileOptions::default().compression_method(CompressionMethod::Stored),
+            SimpleFileOptions::default().compression_method(CompressionMethod::Stored),
         )?;
 
         zip.write_all(b"application/epub+zip")?;
@@ -435,7 +435,7 @@ impl Context {
     fn write_container(&self, zip: &mut ZipWriter<File>) -> Result<()> {
         info!("writing container");
 
-        zip.start_file("META-INF/container.xml", FileOptions::default())?;
+        zip.start_file("META-INF/container.xml", SimpleFileOptions::default())?;
         let mut w = EventWriter::new_with_config(zip, EmitterConfig::new().perform_indent(true));
 
         w.write(
@@ -462,7 +462,7 @@ impl Context {
     fn write_package(&self, zip: &mut ZipWriter<File>) -> Result<()> {
         info!("writing package");
 
-        zip.start_file("item/standard.opf", FileOptions::default())?;
+        zip.start_file("item/standard.opf", SimpleFileOptions::default())?;
         let mut w = EventWriter::new_with_config(zip, EmitterConfig::new().perform_indent(true));
 
         w.write(
@@ -747,7 +747,10 @@ impl Context {
     fn write_navigation(&self, zip: &mut ZipWriter<File>) -> Result<()> {
         info!("writing navigation");
 
-        zip.start_file("item/navigation-documents.xhtml", FileOptions::default())?;
+        zip.start_file(
+            "item/navigation-documents.xhtml",
+            SimpleFileOptions::default(),
+        )?;
 
         writeln!(zip, r#"<?xml version="1.0" encoding="utf-8"?>"#)?;
         writeln!(zip, r#"<!DOCTYPE html>"#)?;

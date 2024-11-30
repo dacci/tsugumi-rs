@@ -99,7 +99,7 @@ mod tests {
     fn test_into_chapter() {
         let mut iter = create_chapter(
             Some("title"),
-            &vec!["cover".into(), "page1".into(), "page2".into()],
+            &["cover".into(), "page1".into(), "page2".into()],
         )
         .into_iter();
         assert_eq!(
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_into_chapter_cover_only() {
-        let mut iter = create_chapter(None, &vec!["cover".into()]).into_iter();
+        let mut iter = create_chapter(None, &["cover".into()]).into_iter();
         assert_eq!(
             iter.next(),
             Some(Chapter {
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_into_chapter_empty() {
-        let mut iter = create_chapter(None, &vec![]).into_iter();
+        let mut iter = create_chapter(None, &[]).into_iter();
         assert_eq!(iter.next(), Some(Default::default()));
         assert_eq!(iter.next(), None);
     }
