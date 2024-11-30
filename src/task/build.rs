@@ -16,7 +16,7 @@ use zip::{CompressionMethod, ZipWriter};
 #[derive(clap::Args)]
 pub(super) struct Args {
     /// Output EPub file in PATH.
-    #[arg(short, long, value_name = "PATH")]
+    #[arg(short, long, value_name = "PATH", value_hint = clap::ValueHint::DirPath)]
     output: Option<PathBuf>,
 }
 

@@ -8,18 +8,19 @@ use std::path::PathBuf;
 #[derive(clap::Args)]
 pub(super) struct Args {
     /// Set the main title of the book.
-    #[arg(short, long)]
+    #[arg(short, long, value_hint = clap::ValueHint::Other)]
     title: Option<String>,
 
     /// Set the author of the book.
-    #[arg(short, long)]
+    #[arg(short, long, value_hint = clap::ValueHint::Other)]
     author: Option<String>,
 
     /// Set the identifier of the book.
-    #[arg(short, long, value_name = "URN")]
+    #[arg(short, long, value_name = "URN", value_hint = clap::ValueHint::Other)]
     identifier: Option<String>,
 
     /// Create pages from files and set the first page as the cover page.
+    #[arg(value_hint = clap::ValueHint::FilePath)]
     files: Vec<PathBuf>,
 }
 

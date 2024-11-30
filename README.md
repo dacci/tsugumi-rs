@@ -6,7 +6,7 @@
 $ tsugumi --help
 Simple EPUB builder
 
-Usage: tsugumi <COMMAND>
+Usage: tsugumi [OPTIONS] [COMMAND]
 
 Commands:
   new    Create a new book
@@ -14,8 +14,9 @@ Commands:
   help   Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help     Print help information
-  -V, --version  Print version information
+      --generate-completion <SHELL>  Generate shell completions [possible values: bash, elvish, fish, powershell, zsh]
+  -h, --help                         Print help
+  -V, --version                      Print version
 ```
 
 ```console
@@ -31,7 +32,7 @@ Options:
   -t, --title <TITLE>     Set the main title of the book
   -a, --author <AUTHOR>   Set the author of the book
   -i, --identifier <URN>  Set the identifier of the book
-  -h, --help              Print help information
+  -h, --help              Print help
 ```
 
 ```console
@@ -42,5 +43,5 @@ Usage: tsugumi build [OPTIONS]
 
 Options:
   -o, --output <PATH>  Output EPub file in PATH
-  -h, --help           Print help information
+  -h, --help           Print help
 ```
