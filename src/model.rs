@@ -1728,14 +1728,14 @@ mod serde_enum {
         }
     }
 
-    pub fn wrap<T>(inner: &T) -> Serialize<T> {
+    pub fn wrap<T>(inner: &T) -> Serialize<'_, T> {
         Serialize(inner)
     }
 
     #[cfg(test)]
     mod tests {
         use super::*;
-        use serde_test::{assert_tokens, Token};
+        use serde_test::{Token, assert_tokens};
 
         #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
         struct Test {
@@ -1917,7 +1917,7 @@ mod invariable {
         }
     }
 
-    pub fn wrap<T>(inner: &[T]) -> Serialize<T> {
+    pub fn wrap<T>(inner: &[T]) -> Serialize<'_, T> {
         Serialize(inner)
     }
 

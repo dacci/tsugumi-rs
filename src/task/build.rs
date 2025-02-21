@@ -1,12 +1,12 @@
 use crate::model::{Book, Chapter, Orientation, Page, TitleType};
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use indexmap::IndexMap as Map;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use tempfile::{NamedTempFile, TempPath};
-use time::{format_description::well_known::Iso8601, OffsetDateTime};
+use time::{OffsetDateTime, format_description::well_known::Iso8601};
 use tracing::{debug, info, warn};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
