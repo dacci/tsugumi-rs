@@ -17,7 +17,7 @@ mime_guess = "2.0.5"
 serde = "1.0.215"
 serde_yaml = "0.9.33"
 tempfile = "3.14.0"
-time = { version = "0.3.36", features = ["formatting"] }
+time = { version = "0.3.47", features = ["formatting"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 uuid = { version = "1.11.0", features = ["v4"] }
