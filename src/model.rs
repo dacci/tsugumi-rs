@@ -350,10 +350,10 @@ impl ser::Serialize for Metadata {
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Title {
-    pub name: String,
     pub title_type: TitleType,
-    pub alternate_script: Option<String>,
+    pub text: String,
     pub file_as: Option<String>,
+    pub alternate_script: Option<String>,
 }
 
 impl<'de> de::Deserialize<'de> for Title {
@@ -372,7 +372,7 @@ impl<'de> de::Deserialize<'de> for Title {
                     Err(de::Error::invalid_length(0, &"at least 1"))
                 } else {
                     Ok(Title {
-                        name: v.to_string(),
+                        text: v.to_string(),
                         ..Title::default()
                     })
                 }
@@ -380,10 +380,10 @@ impl<'de> de::Deserialize<'de> for Title {
 
             fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
                 enum Field {
-                    Name,
                     TitleType,
-                    AlternateScript,
+                    Text,
                     FileAs,
+                    AlternateScript,
                 }
 
                 impl<'de> de::Deserialize<'de> for Field {
@@ -401,13 +401,13 @@ impl<'de> de::Deserialize<'de> for Title {
 
                             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
                                 match v {
-                                    "name" => Ok(Field::Name),
                                     "type" => Ok(Field::TitleType),
-                                    "alternateScript" => Ok(Field::AlternateScript),
+                                    "text" => Ok(Field::Text),
                                     "fileAs" => Ok(Field::FileAs),
+                                    "alternateScript" => Ok(Field::AlternateScript),
                                     field => Err(de::Error::unknown_field(
                                         field,
-                                        &["name", "type", "alternateScript", "fileAs"],
+                                        &["type", "text", "fileAs", "alternateScript"],
                                     )),
                                 }
                             }
@@ -417,18 +417,27 @@ impl<'de> de::Deserialize<'de> for Title {
                     }
                 }
 
-                let mut name = None;
                 let mut title_type = None;
-                let mut alternate_script = None;
+                let mut text = None;
                 let mut file_as = None;
+                let mut alternate_script = None;
 
                 while let Some(field) = map.next_key()? {
                     match field {
-                        Field::Name => {
-                            if name.is_some() {
-                                return Err(de::Error::duplicate_field("name"));
+                        Field::TitleType => {
+                            if title_type.is_some() {
+                                return Err(de::Error::duplicate_field("type"));
                             }
-                            name = map
+                            title_type = map
+                                .next_value::<serde_enum::Deserialize<_>>()
+                                .map(|d| d.unwrap())
+                                .map(Some)?;
+                        }
+                        Field::Text => {
+                            if text.is_some() {
+                                return Err(de::Error::duplicate_field("text"));
+                            }
+                            text = map
                                 .next_value()
                                 .and_then(|s: String| {
                                     if s.is_empty() {
@@ -439,14 +448,11 @@ impl<'de> de::Deserialize<'de> for Title {
                                 })
                                 .map(Some)?;
                         }
-                        Field::TitleType => {
-                            if title_type.is_some() {
-                                return Err(de::Error::duplicate_field("type"));
+                        Field::FileAs => {
+                            if file_as.is_some() {
+                                return Err(de::Error::duplicate_field("fileAs"));
                             }
-                            title_type = map
-                                .next_value::<serde_enum::Deserialize<_>>()
-                                .map(|d| d.unwrap())
-                                .map(Some)?;
+                            file_as = map.next_value().map(Some)?;
                         }
                         Field::AlternateScript => {
                             if alternate_script.is_some() {
@@ -454,23 +460,17 @@ impl<'de> de::Deserialize<'de> for Title {
                             }
                             alternate_script = map.next_value().map(Some)?;
                         }
-                        Field::FileAs => {
-                            if file_as.is_some() {
-                                return Err(de::Error::duplicate_field("fileAs"));
-                            }
-                            file_as = map.next_value().map(Some)?;
-                        }
                     }
                 }
 
-                let name = name.unwrap_or_default();
                 let title_type = title_type.unwrap_or_default();
+                let text = text.ok_or_else(|| de::Error::missing_field("text"))?;
 
                 Ok(Title {
-                    name,
                     title_type,
-                    alternate_script,
+                    text,
                     file_as,
+                    alternate_script,
                 })
             }
         }
@@ -481,28 +481,25 @@ impl<'de> de::Deserialize<'de> for Title {
 
 impl ser::Serialize for Title {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        if self.name.is_empty() {
-            return Err(ser::Error::custom("name must not be empty"));
+        if self.text.is_empty() {
+            return Err(ser::Error::custom("text must not be empty"));
         }
 
         if self.title_type.is_default() && self.alternate_script.is_none() && self.file_as.is_none()
         {
-            serializer.serialize_str(&self.name)
+            serializer.serialize_str(&self.text)
         } else {
             let mut map = serializer.serialize_map(None)?;
 
-            map.serialize_entry("name", &self.name)?;
+            map.serialize_entry("type", &serde_enum::wrap(&self.title_type))?;
+            map.serialize_entry("text", &self.text)?;
 
-            if !self.title_type.is_default() {
-                map.serialize_entry("type", &serde_enum::wrap(&self.title_type))?;
+            if let Some(file_as) = &self.file_as {
+                map.serialize_entry("fileAs", file_as)?;
             }
 
             if let Some(alternate_script) = &self.alternate_script {
                 map.serialize_entry("alternateScript", alternate_script)?;
-            }
-
-            if let Some(file_as) = &self.file_as {
-                map.serialize_entry("fileAs", file_as)?;
             }
 
             map.end()
@@ -563,10 +560,10 @@ impl AsRef<str> for TitleType {
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Creator {
-    pub name: String,
-    pub role: Option<String>,
-    pub alternate_script: Option<String>,
+    pub role: String,
+    pub text: String,
     pub file_as: Option<String>,
+    pub alternate_script: Option<String>,
 }
 
 impl<'de> de::Deserialize<'de> for Creator {
@@ -585,7 +582,8 @@ impl<'de> de::Deserialize<'de> for Creator {
                     Err(de::Error::invalid_length(0, &"at least 1"))
                 } else {
                     Ok(Creator {
-                        name: v.to_string(),
+                        role: "aut".to_string(),
+                        text: v.to_string(),
                         ..Creator::default()
                     })
                 }
@@ -593,10 +591,10 @@ impl<'de> de::Deserialize<'de> for Creator {
 
             fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
                 enum Field {
-                    Name,
                     Role,
-                    AlternateScript,
+                    Text,
                     FileAs,
+                    AlternateScript,
                 }
 
                 impl<'de> de::Deserialize<'de> for Field {
@@ -614,11 +612,14 @@ impl<'de> de::Deserialize<'de> for Creator {
 
                             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
                                 match v {
-                                    "name" => Ok(Field::Name),
                                     "role" => Ok(Field::Role),
-                                    "alternateScript" => Ok(Field::AlternateScript),
+                                    "text" => Ok(Field::Text),
                                     "fileAs" => Ok(Field::FileAs),
-                                    field => Err(de::Error::unknown_field(field, &[])),
+                                    "alternateScript" => Ok(Field::AlternateScript),
+                                    field => Err(de::Error::unknown_field(
+                                        field,
+                                        &["role", "text", "fileAs", "alternateScript"],
+                                    )),
                                 }
                             }
                         }
@@ -627,18 +628,24 @@ impl<'de> de::Deserialize<'de> for Creator {
                     }
                 }
 
-                let mut name = None;
                 let mut role = None;
-                let mut alternate_script = None;
+                let mut text = None;
                 let mut file_as = None;
+                let mut alternate_script = None;
 
                 while let Some(field) = map.next_key()? {
                     match field {
-                        Field::Name => {
-                            if name.is_some() {
-                                return Err(de::Error::duplicate_field("name"));
+                        Field::Role => {
+                            if role.is_some() {
+                                return Err(de::Error::duplicate_field("role"));
                             }
-                            name = map
+                            role = map.next_value().map(Some)?;
+                        }
+                        Field::Text => {
+                            if text.is_some() {
+                                return Err(de::Error::duplicate_field("text"));
+                            }
+                            text = map
                                 .next_value()
                                 .and_then(|s: String| {
                                     if s.is_empty() {
@@ -649,34 +656,29 @@ impl<'de> de::Deserialize<'de> for Creator {
                                 })
                                 .map(Some)?;
                         }
-                        Field::Role => {
-                            if role.is_some() {
-                                return Err(de::Error::duplicate_field("role"));
+                        Field::FileAs => {
+                            if file_as.is_some() {
+                                return Err(de::Error::duplicate_field("fileAs"));
                             }
-                            role = map.next_value().map(Some)?;
+                            file_as = map.next_value().map(Some)?;
                         }
                         Field::AlternateScript => {
                             if alternate_script.is_some() {
-                                return Err(de::Error::duplicate_field("alternate_script"));
+                                return Err(de::Error::duplicate_field("alternateScript"));
                             }
                             alternate_script = map.next_value().map(Some)?;
-                        }
-                        Field::FileAs => {
-                            if file_as.is_some() {
-                                return Err(de::Error::duplicate_field("file_as"));
-                            }
-                            file_as = map.next_value().map(Some)?;
                         }
                     }
                 }
 
-                let name = name.unwrap_or_default();
+                let role = role.unwrap_or_else(|| "aut".to_string());
+                let text = text.ok_or_else(|| de::Error::missing_field("text"))?;
 
                 Ok(Creator {
-                    name,
                     role,
-                    alternate_script,
+                    text,
                     file_as,
+                    alternate_script,
                 })
             }
         }
@@ -687,27 +689,24 @@ impl<'de> de::Deserialize<'de> for Creator {
 
 impl ser::Serialize for Creator {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        if self.name.is_empty() {
-            return Err(ser::Error::custom("name must not be empty"));
+        if self.text.is_empty() {
+            return Err(ser::Error::custom("text must not be empty"));
         }
 
-        if self.role.is_none() && self.alternate_script.is_none() && self.file_as.is_none() {
-            serializer.serialize_str(&self.name)
+        if self.role == "aut" && self.alternate_script.is_none() && self.file_as.is_none() {
+            serializer.serialize_str(&self.text)
         } else {
             let mut map = serializer.serialize_map(None)?;
 
-            map.serialize_entry("name", &self.name)?;
+            map.serialize_entry("role", &self.role)?;
+            map.serialize_entry("text", &self.text)?;
 
-            if let Some(role) = &self.role {
-                map.serialize_entry("role", role)?;
+            if let Some(file_as) = &self.file_as {
+                map.serialize_entry("fileAs", file_as)?;
             }
 
             if let Some(alternate_script) = &self.alternate_script {
                 map.serialize_entry("alternateScript", alternate_script)?;
-            }
-
-            if let Some(file_as) = &self.file_as {
-                map.serialize_entry("fileAs", file_as)?;
             }
 
             map.end()
@@ -718,8 +717,8 @@ impl ser::Serialize for Creator {
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Collection {
-    pub name: String,
     pub collection_type: CollectionType,
+    pub text: String,
     pub position: Option<u32>,
 }
 
@@ -736,8 +735,8 @@ impl<'de> de::Deserialize<'de> for Collection {
 
             fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
                 enum Field {
-                    Name,
                     Type,
+                    Text,
                     Position,
                 }
 
@@ -756,12 +755,12 @@ impl<'de> de::Deserialize<'de> for Collection {
 
                             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
                                 match v {
-                                    "name" => Ok(Field::Name),
                                     "type" => Ok(Field::Type),
+                                    "text" => Ok(Field::Text),
                                     "position" => Ok(Field::Position),
                                     field => Err(de::Error::unknown_field(
                                         field,
-                                        &["name", "type", "position"],
+                                        &["type", "text", "position"],
                                     )),
                                 }
                             }
@@ -771,17 +770,26 @@ impl<'de> de::Deserialize<'de> for Collection {
                     }
                 }
 
-                let mut name = None;
                 let mut collection_type = None;
+                let mut text = None;
                 let mut position = None;
 
                 while let Some(field) = map.next_key()? {
                     match field {
-                        Field::Name => {
-                            if name.is_some() {
-                                return Err(de::Error::duplicate_field("name"));
+                        Field::Type => {
+                            if collection_type.is_some() {
+                                return Err(de::Error::duplicate_field("type"));
                             }
-                            name = map
+                            collection_type = map
+                                .next_value::<serde_enum::Deserialize<_>>()
+                                .map(|d| d.unwrap())
+                                .map(Some)?;
+                        }
+                        Field::Text => {
+                            if text.is_some() {
+                                return Err(de::Error::duplicate_field("text"));
+                            }
+                            text = map
                                 .next_value()
                                 .and_then(|s: String| {
                                     if s.is_empty() {
@@ -790,15 +798,6 @@ impl<'de> de::Deserialize<'de> for Collection {
                                         Ok(s)
                                     }
                                 })
-                                .map(Some)?;
-                        }
-                        Field::Type => {
-                            if collection_type.is_some() {
-                                return Err(de::Error::duplicate_field("type"));
-                            }
-                            collection_type = map
-                                .next_value::<serde_enum::Deserialize<_>>()
-                                .map(|d| d.unwrap())
                                 .map(Some)?;
                         }
                         Field::Position => {
@@ -810,13 +809,13 @@ impl<'de> de::Deserialize<'de> for Collection {
                     }
                 }
 
-                let name = name.unwrap_or_default();
                 let collection_type =
                     collection_type.ok_or_else(|| de::Error::missing_field("type"))?;
+                let text = text.ok_or_else(|| de::Error::missing_field("text"))?;
 
                 Ok(Collection {
-                    name,
                     collection_type,
+                    text,
                     position,
                 })
             }
@@ -828,14 +827,14 @@ impl<'de> de::Deserialize<'de> for Collection {
 
 impl ser::Serialize for Collection {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        if self.name.is_empty() {
+        if self.text.is_empty() {
             return Err(ser::Error::custom("name must not be empty"));
         }
 
         let mut map = serializer.serialize_map(None)?;
 
-        map.serialize_entry("name", &self.name)?;
         map.serialize_entry("type", &serde_enum::wrap(&self.collection_type))?;
+        map.serialize_entry("text", &self.text)?;
 
         if let Some(position) = &self.position {
             map.serialize_entry("position", position)?;
@@ -1299,7 +1298,7 @@ impl ser::Serialize for Style {
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Chapter {
-    pub name: Option<String>,
+    pub title: Option<String>,
     pub page: Vec<Page>,
     pub cover: bool,
 }
@@ -1317,7 +1316,7 @@ impl<'de> de::Deserialize<'de> for Chapter {
 
             fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
                 enum Field {
-                    Name,
+                    Title,
                     Page,
                     Cover,
                 }
@@ -1337,12 +1336,12 @@ impl<'de> de::Deserialize<'de> for Chapter {
 
                             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
                                 match v {
-                                    "name" => Ok(Field::Name),
+                                    "title" => Ok(Field::Title),
                                     "page" => Ok(Field::Page),
                                     "cover" => Ok(Field::Cover),
                                     field => Err(de::Error::unknown_field(
                                         field,
-                                        &["name", "page", "cover"],
+                                        &["title", "page", "cover"],
                                     )),
                                 }
                             }
@@ -1352,17 +1351,17 @@ impl<'de> de::Deserialize<'de> for Chapter {
                     }
                 }
 
-                let mut name = None;
+                let mut title = None;
                 let mut page = None;
                 let mut cover = None;
 
                 while let Some(field) = map.next_key()? {
                     match field {
-                        Field::Name => {
-                            if name.is_some() {
-                                return Err(de::Error::duplicate_field("name"));
+                        Field::Title => {
+                            if title.is_some() {
+                                return Err(de::Error::duplicate_field("title"));
                             }
-                            name = map.next_value().map(Some)?;
+                            title = map.next_value().map(Some)?;
                         }
                         Field::Page => {
                             if page.is_some() {
@@ -1392,7 +1391,7 @@ impl<'de> de::Deserialize<'de> for Chapter {
                 let page = page.ok_or_else(|| de::Error::missing_field("page"))?;
                 let cover = cover.unwrap_or_default();
 
-                Ok(Chapter { name, page, cover })
+                Ok(Chapter { title, page, cover })
             }
         }
 
@@ -1404,8 +1403,8 @@ impl ser::Serialize for Chapter {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
 
-        if let Some(name) = &self.name {
-            map.serialize_entry("name", name)?;
+        if let Some(title) = &self.title {
+            map.serialize_entry("title", title)?;
         }
 
         if !self.page.is_empty() {
@@ -1481,7 +1480,7 @@ mod tests {
             &Book {
                 metadata: Metadata {
                     title: vec![Title {
-                        name: "Title".to_string(),
+                        text: "Title".to_string(),
                         ..Title::default()
                     }],
                     language: "ja".to_string(),
@@ -1538,16 +1537,16 @@ mod tests {
     fn test_serde_title() {
         assert_tokens(
             &Title {
-                name: "Name".to_string(),
                 title_type: TitleType::Short,
+                text: "Text".to_string(),
                 ..Title::default()
             },
             &[
                 Token::Map { len: None },
-                Token::Str("name"),
-                Token::Str("Name"),
                 Token::Str("type"),
                 Token::Str("short"),
+                Token::Str("text"),
+                Token::Str("Text"),
                 Token::MapEnd,
             ],
         );
@@ -1557,24 +1556,25 @@ mod tests {
     fn test_serde_creator() {
         assert_tokens(
             &Creator {
-                name: "Name".to_string(),
+                role: "aut".to_string(),
+                text: "Text".to_string(),
                 ..Creator::default()
             },
-            &[Token::Str("Name")],
+            &[Token::Str("Text")],
         );
 
         assert_tokens(
             &Creator {
-                name: "Name".to_string(),
-                role: Some("aut".to_string()),
+                role: "edt".to_string(),
+                text: "Text".to_string(),
                 ..Creator::default()
             },
             &[
                 Token::Map { len: None },
-                Token::Str("name"),
-                Token::Str("Name"),
                 Token::Str("role"),
-                Token::Str("aut"),
+                Token::Str("edt"),
+                Token::Str("text"),
+                Token::Str("Text"),
                 Token::MapEnd,
             ],
         );
@@ -1584,16 +1584,16 @@ mod tests {
     fn test_serde_collection() {
         assert_tokens(
             &Collection {
-                name: "Name".to_string(),
                 collection_type: CollectionType::Series,
+                text: "Text".to_string(),
                 position: Default::default(),
             },
             &[
                 Token::Map { len: None },
-                Token::Str("name"),
-                Token::Str("Name"),
                 Token::Str("type"),
                 Token::Str("series"),
+                Token::Str("text"),
+                Token::Str("Text"),
                 Token::MapEnd,
             ],
         );

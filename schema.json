@@ -43,7 +43,7 @@
         "title": {
           "oneOf": [
             {
-              "$ref": "#/definitions/TitleName"
+              "$ref": "#/definitions/TitleText"
             },
             {
               "$ref": "#/definitions/Title"
@@ -54,7 +54,7 @@
               "items": {
                 "oneOf": [
                   {
-                    "$ref": "#/definitions/TitleName"
+                    "$ref": "#/definitions/TitleText"
                   },
                   {
                     "$ref": "#/definitions/Title"
@@ -67,7 +67,7 @@
         "creator": {
           "oneOf": [
             {
-              "$ref": "#/definitions/CreatorName"
+              "$ref": "#/definitions/CreatorText"
             },
             {
               "$ref": "#/definitions/Creator"
@@ -77,7 +77,7 @@
               "items": {
                 "oneOf": [
                   {
-                    "$ref": "#/definitions/CreatorName"
+                    "$ref": "#/definitions/CreatorText"
                   },
                   {
                     "$ref": "#/definitions/Creator"
@@ -90,7 +90,7 @@
         "contributor": {
           "oneOf": [
             {
-              "$ref": "#/definitions/CreatorName"
+              "$ref": "#/definitions/CreatorText"
             },
             {
               "$ref": "#/definitions/Creator"
@@ -100,7 +100,7 @@
               "items": {
                 "oneOf": [
                   {
-                    "$ref": "#/definitions/CreatorName"
+                    "$ref": "#/definitions/CreatorText"
                   },
                   {
                     "$ref": "#/definitions/Creator"
@@ -133,27 +133,28 @@
         }
       }
     },
-    "TitleName": {
+    "TitleText": {
       "type": "string",
       "minLength": 1
     },
     "Title": {
       "type": "object",
       "required": [
-        "name"
+        "type",
+        "text"
       ],
       "additionalProperties": false,
       "properties": {
-        "name": {
-          "$ref": "#/definitions/TitleName"
-        },
         "type": {
           "$ref": "#/definitions/TitleType"
         },
-        "alternateScript": {
-          "type": "string"
+        "text": {
+          "$ref": "#/definitions/TitleText"
         },
         "fileAs": {
+          "type": "string"
+        },
+        "alternateScript": {
           "type": "string"
         }
       }
@@ -170,27 +171,28 @@
       ],
       "default": "main"
     },
-    "CreatorName": {
+    "CreatorText": {
       "type": "string",
       "minLength": 1
     },
     "Creator": {
       "type": "object",
       "required": [
-        "name"
+        "role",
+        "text"
       ],
       "additionalProperties": false,
       "properties": {
-        "name": {
-          "$ref": "#/definitions/CreatorName"
-        },
         "role": {
           "type": "string"
         },
-        "alternateScript": {
-          "type": "string"
+        "text": {
+          "$ref": "#/definitions/CreatorText"
         },
         "fileAs": {
+          "type": "string"
+        },
+        "alternateScript": {
           "type": "string"
         }
       }
@@ -198,17 +200,17 @@
     "Collection": {
       "type": "object",
       "required": [
-        "name",
-        "type"
+        "type",
+        "text"
       ],
       "additionalProperties": false,
       "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
         "type": {
           "$ref": "#/definitions/CollectionType"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
         },
         "position": {
           "type": "integer"
@@ -317,7 +319,7 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "name": {
+        "title": {
           "type": "string"
         },
         "page": {

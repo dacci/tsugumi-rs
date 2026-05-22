@@ -83,7 +83,7 @@ impl Builder {
                 .iter()
                 .find(|t| t.title_type == TitleType::Main)
                 .or_else(|| self.book.metadata.title.first())
-                .map(|t| t.name.as_str().to_string())
+                .map(|t| t.text.as_str().to_string())
                 .unwrap_or_default(),
             ..Default::default()
         };
@@ -150,7 +150,7 @@ impl Builder {
     fn build_chapter(&self, cx: &mut Context, chapter: &Chapter) -> Result<()> {
         info!(
             "building chapter {}",
-            chapter.name.as_deref().unwrap_or("(untitled)")
+            chapter.title.as_deref().unwrap_or("(untitled)")
         );
 
         let mut first = true;
@@ -159,7 +159,7 @@ impl Builder {
             if first {
                 first = false;
 
-                if let Some(name) = &chapter.name {
+                if let Some(name) = &chapter.title {
                     cx.toc.insert(id, name.clone());
                 }
             }
@@ -490,7 +490,7 @@ impl Context {
             let refines = format!("#title{seq}");
 
             w.write(XmlEvent::start_element("dc:title").attr("id", &refines[1..]))?;
-            w.write(XmlEvent::characters(&title.name))?;
+            w.write(XmlEvent::characters(&title.text))?;
             w.write(XmlEvent::end_element())?;
 
             w.write(
@@ -534,19 +534,17 @@ impl Context {
             let refines = format!("#creator{seq}");
 
             w.write(XmlEvent::start_element("dc:creator").attr("id", &refines[1..]))?;
-            w.write(XmlEvent::characters(&creator.name))?;
+            w.write(XmlEvent::characters(&creator.text))?;
             w.write(XmlEvent::end_element())?;
 
-            if let Some(value) = &creator.role {
-                w.write(
-                    XmlEvent::start_element("meta")
-                        .attr("refines", &refines)
-                        .attr("property", "role")
-                        .attr("scheme", "marc:relators"),
-                )?;
-                w.write(XmlEvent::characters(value))?;
-                w.write(XmlEvent::end_element())?;
-            }
+            w.write(
+                XmlEvent::start_element("meta")
+                    .attr("refines", &refines)
+                    .attr("property", "role")
+                    .attr("scheme", "marc:relators"),
+            )?;
+            w.write(XmlEvent::characters(&creator.role))?;
+            w.write(XmlEvent::end_element())?;
 
             if let Some(value) = &creator.alternate_script {
                 w.write(
@@ -581,19 +579,17 @@ impl Context {
             let refines = format!("#creator{seq}");
 
             w.write(XmlEvent::start_element("dc:creator").attr("id", &refines[1..]))?;
-            w.write(XmlEvent::characters(&contributor.name))?;
+            w.write(XmlEvent::characters(&contributor.text))?;
             w.write(XmlEvent::end_element())?;
 
-            if let Some(value) = &contributor.role {
-                w.write(
-                    XmlEvent::start_element("meta")
-                        .attr("refines", &refines)
-                        .attr("property", "role")
-                        .attr("scheme", "marc:relators"),
-                )?;
-                w.write(XmlEvent::characters(value))?;
-                w.write(XmlEvent::end_element())?;
-            }
+            w.write(
+                XmlEvent::start_element("meta")
+                    .attr("refines", &refines)
+                    .attr("property", "role")
+                    .attr("scheme", "marc:relators"),
+            )?;
+            w.write(XmlEvent::characters(&contributor.role))?;
+            w.write(XmlEvent::end_element())?;
 
             if let Some(value) = &contributor.alternate_script {
                 w.write(
@@ -632,7 +628,7 @@ impl Context {
                     .attr("property", "belongs-to-collection")
                     .attr("id", &refines[1..]),
             )?;
-            w.write(XmlEvent::characters(&collection.name))?;
+            w.write(XmlEvent::characters(&collection.text))?;
             w.write(XmlEvent::end_element())?;
 
             w.write(

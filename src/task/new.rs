@@ -27,7 +27,8 @@ pub(super) struct Args {
 pub(super) fn main(args: Args) -> Result<()> {
     let metadata = Metadata {
         title: vec![Title {
-            name: args.title.as_ref().cloned().unwrap_or_else(|| {
+            title_type: TitleType::Main,
+            text: args.title.as_ref().cloned().unwrap_or_else(|| {
                 std::env::current_dir()
                     .unwrap_or_default()
                     .file_name()
@@ -35,14 +36,13 @@ pub(super) fn main(args: Args) -> Result<()> {
                     .to_string_lossy()
                     .to_string()
             }),
-            title_type: TitleType::Main,
             ..Default::default()
         }],
         creator: args
             .author
-            .map(|name| Creator {
-                name,
-                role: Some("aut".to_string()),
+            .map(|text| Creator {
+                role: "aut".to_string(),
+                text,
                 ..Default::default()
             })
             .map(|c| vec![c])
@@ -79,12 +79,12 @@ pub(super) fn main(args: Args) -> Result<()> {
 fn create_chapter(title: Option<&str>, files: &[PathBuf]) -> Vec<Chapter> {
     let mut iter = files.iter().map(|src| Page { src: src.clone() });
     let cover = iter.next().map(|page| Chapter {
-        name: Some("表紙".to_string()),
+        title: Some("表紙".to_string()),
         page: vec![page],
         cover: true,
     });
     let pages = Chapter {
-        name: title.map(|s| s.to_string()),
+        title: title.map(|s| s.to_string()),
         page: iter.collect::<Vec<_>>(),
         ..Default::default()
     };
@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(
             iter.next(),
             Some(Chapter {
-                name: Some("表紙".to_string()),
+                title: Some("表紙".to_string()),
                 page: vec![Page {
                     src: "cover".into()
                 }],
@@ -116,7 +116,7 @@ mod tests {
         assert_eq!(
             iter.next(),
             Some(Chapter {
-                name: Some("title".to_string()),
+                title: Some("title".to_string()),
                 page: vec![
                     Page {
                         src: "page1".into()
@@ -137,7 +137,7 @@ mod tests {
         assert_eq!(
             iter.next(),
             Some(Chapter {
-                name: Some("表紙".to_string()),
+                title: Some("表紙".to_string()),
                 page: vec![Page {
                     src: "cover".into()
                 }],
