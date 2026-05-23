@@ -71,7 +71,7 @@ pub(super) fn main(args: Args) -> Result<()> {
     };
 
     let file = File::create("tsugumi.yaml")?;
-    serde_yaml::to_writer(file, &book)?;
+    serde_yaml_ng::to_writer(file, &book)?;
 
     Ok(())
 }

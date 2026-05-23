@@ -64,7 +64,7 @@ impl Builder {
         let path = path.as_ref();
         let file =
             File::open(path).with_context(|| format!("failed to open `{}`", path.display()))?;
-        let book: Book = serde_yaml::from_reader(file)
+        let book: Book = serde_yaml_ng::from_reader(file)
             .with_context(|| format!("failed to read `{}`", path.display()))?;
 
         Ok(Self {
