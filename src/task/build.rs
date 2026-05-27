@@ -169,29 +169,53 @@ impl Builder {
     }
 
     fn build_page(&self, cx: &mut Context, chapter: &Chapter, page: &Page) -> Result<String> {
-        debug!("building page from {}", page.src.display());
+        let (id, width, height) = match page {
+            Page::File { src } => {
+                debug!("building page from {}", src.display());
 
-        let src = self.root.join(&page.src);
+                let src = self.root.join(src);
 
-        let (width, height) = {
-            let img =
-                image::open(&src).with_context(|| format!("failed to read {}", src.display()))?;
-            (img.width(), img.height())
+                let (width, height) = {
+                    let img = image::open(&src)
+                        .with_context(|| format!("failed to read {}", src.display()))?;
+                    (img.width(), img.height())
+                };
+
+                match self.book.rendition.orientation {
+                    Orientation::Landscape if width < height => {
+                        warn!("`{}` is a portrait page", src.display())
+                    }
+                    Orientation::Portrait if height < width => {
+                        warn!("`{}` is a landscape page", src.display())
+                    }
+                    _ => {}
+                }
+
+                (cx.add_image(src.as_path(), chapter.cover), width, height)
+            }
+            &Page::Blank {
+                width,
+                height,
+                color,
+            } => {
+                debug!("building blank page {}x{}", width, height);
+
+                let path = {
+                    let mut temp = NamedTempFile::with_suffix(".jpeg")?;
+                    let img = image::RgbImage::from_pixel(
+                        width,
+                        height,
+                        image::Rgb([(color >> 16) as u8, (color >> 8) as u8, color as u8]),
+                    );
+                    img.write_to(&mut temp, image::ImageFormat::Jpeg)?;
+                    temp.into_temp_path()
+                };
+
+                (cx.add_image(path, chapter.cover), width, height)
+            }
         };
 
-        match self.book.rendition.orientation {
-            Orientation::Landscape if width < height => {
-                warn!("`{}` is a portrait page", page.src.display())
-            }
-            Orientation::Portrait if height < width => {
-                warn!("`{}` is a landscape page", page.src.display())
-            }
-            _ => {}
-        }
-
-        let id = cx.add_image(src.as_path(), chapter.cover);
         let image = cx.manifest.get(&id).unwrap();
-
         let mut file = NamedTempFile::new()?;
 
         writeln!(file, r#"<?xml version="1.0" encoding="utf-8"?>"#)?;

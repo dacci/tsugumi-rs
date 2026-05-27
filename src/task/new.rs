@@ -77,7 +77,7 @@ pub(super) fn main(args: Args) -> Result<()> {
 }
 
 fn create_chapter(title: Option<&str>, files: &[PathBuf]) -> Vec<Chapter> {
-    let mut iter = files.iter().map(|src| Page { src: src.clone() });
+    let mut iter = files.iter().map(|src| Page::File { src: src.clone() });
     let cover = iter.next().map(|page| Chapter {
         title: Some("表紙".to_string()),
         page: vec![page],
@@ -107,7 +107,7 @@ mod tests {
             iter.next(),
             Some(Chapter {
                 title: Some("表紙".to_string()),
-                page: vec![Page {
+                page: vec![Page::File {
                     src: "cover".into()
                 }],
                 cover: true,
@@ -118,10 +118,10 @@ mod tests {
             Some(Chapter {
                 title: Some("title".to_string()),
                 page: vec![
-                    Page {
+                    Page::File {
                         src: "page1".into()
                     },
-                    Page {
+                    Page::File {
                         src: "page2".into()
                     }
                 ],
@@ -138,7 +138,7 @@ mod tests {
             iter.next(),
             Some(Chapter {
                 title: Some("表紙".to_string()),
-                page: vec![Page {
+                page: vec![Page::File {
                     src: "cover".into()
                 }],
                 cover: true,

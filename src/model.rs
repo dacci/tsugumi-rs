@@ -1419,42 +1419,162 @@ impl ser::Serialize for Chapter {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub struct Page {
-    pub src: PathBuf,
+pub enum Page {
+    File { src: PathBuf },
+    Blank { width: u32, height: u32, color: u32 },
 }
 
 impl<'de> de::Deserialize<'de> for Page {
     fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Visitor;
 
-        impl de::Visitor<'_> for Visitor {
+        impl<'de> de::Visitor<'de> for Visitor {
             type Value = Page;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a string")
+                formatter.write_str("a string or a map")
             }
 
             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
                 if v.is_empty() {
                     Err(de::Error::invalid_length(0, &"at least 1"))
                 } else {
-                    Ok(Page { src: v.into() })
+                    Ok(Page::File { src: v.into() })
+                }
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                enum Field {
+                    Type,
+                    Src,
+                    Width,
+                    Height,
+                    Color,
+                }
+
+                impl<'de> de::Deserialize<'de> for Field {
+                    fn deserialize<D: de::Deserializer<'de>>(
+                        deserializer: D,
+                    ) -> Result<Self, D::Error> {
+                        struct Visitor;
+
+                        impl de::Visitor<'_> for Visitor {
+                            type Value = Field;
+
+                            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                                formatter.write_str("an identifier")
+                            }
+
+                            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                                match v {
+                                    "type" => Ok(Field::Type),
+                                    "src" => Ok(Field::Src),
+                                    "width" => Ok(Field::Width),
+                                    "height" => Ok(Field::Height),
+                                    "color" => Ok(Field::Color),
+                                    field => Err(de::Error::unknown_field(
+                                        field,
+                                        &["type", "src", "width", "height", "color"],
+                                    )),
+                                }
+                            }
+                        }
+
+                        deserializer.deserialize_identifier(Visitor)
+                    }
+                }
+
+                let mut type_ = None;
+                let mut src = None;
+                let mut width = None;
+                let mut height = None;
+                let mut color = None;
+
+                while let Some(field) = map.next_key()? {
+                    match field {
+                        Field::Type => {
+                            if type_.is_some() {
+                                return Err(de::Error::duplicate_field("type"));
+                            }
+                            type_ = map.next_value().map(Some)?;
+                        }
+                        Field::Src => {
+                            if src.is_some() {
+                                return Err(de::Error::duplicate_field("src"));
+                            }
+                            src = map.next_value().map(Some)?;
+                        }
+                        Field::Width => {
+                            if width.is_some() {
+                                return Err(de::Error::duplicate_field("width"));
+                            }
+                            width = map.next_value().map(Some)?;
+                        }
+                        Field::Height => {
+                            if height.is_some() {
+                                return Err(de::Error::duplicate_field("height"));
+                            }
+                            height = map.next_value().map(Some)?;
+                        }
+                        Field::Color => {
+                            if color.is_some() {
+                                return Err(de::Error::duplicate_field("color"));
+                            }
+                            color = map.next_value().map(Some)?;
+                        }
+                    }
+                }
+
+                match type_.ok_or_else(|| de::Error::missing_field("type"))? {
+                    "file" => {
+                        let src = src.ok_or_else(|| de::Error::missing_field("src"))?;
+                        Ok(Page::File { src })
+                    }
+                    "blank" => {
+                        let width = width.ok_or_else(|| de::Error::missing_field("width"))?;
+                        let height = height.ok_or_else(|| de::Error::missing_field("height"))?;
+                        let color = color.ok_or_else(|| de::Error::missing_field("color"))?;
+                        Ok(Page::Blank {
+                            width,
+                            height,
+                            color,
+                        })
+                    }
+                    variant => Err(de::Error::unknown_variant(variant, &["file", "blank"])),
                 }
             }
         }
 
-        deserializer.deserialize_str(Visitor)
+        deserializer.deserialize_any(Visitor)
     }
 }
 
 impl ser::Serialize for Page {
     fn serialize<S: ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        if self.src.is_default() {
-            Err(ser::Error::custom("page must not be empty"))
-        } else {
-            ser::Serialize::serialize(&self.src, serializer)
+        match self {
+            Self::File { src } => {
+                if src.is_default() {
+                    Err(ser::Error::custom("page must not be empty"))
+                } else {
+                    ser::Serialize::serialize(src, serializer)
+                }
+            }
+            Self::Blank {
+                width,
+                height,
+                color,
+            } => {
+                let mut map = serializer.serialize_map(Some(4))?;
+
+                map.serialize_entry("type", "blank")?;
+                map.serialize_entry("width", width)?;
+                map.serialize_entry("height", height)?;
+                map.serialize_entry("color", color)?;
+
+                map.end()
+            }
         }
     }
 }
@@ -1488,7 +1608,7 @@ mod tests {
                     ..Metadata::default()
                 },
                 chapter: vec![Chapter {
-                    page: vec![Page {
+                    page: vec![Page::File {
                         src: "cover.jpg".into(),
                     }],
                     ..Chapter::default()
@@ -1640,7 +1760,7 @@ mod tests {
     fn test_serde_chapter() {
         assert_tokens(
             &Chapter {
-                page: vec![Page { src: "page".into() }],
+                page: vec![Page::File { src: "page".into() }],
                 ..Chapter::default()
             },
             &[
@@ -1654,9 +1774,15 @@ mod tests {
 
     #[test]
     fn test_serde_page() {
-        assert_tokens(&Page { src: "path".into() }, &[Token::Str("path")]);
+        assert_tokens(&Page::File { src: "path".into() }, &[Token::Str("path")]);
 
-        assert_ser_tokens_error(&Page::default(), &[], "page must not be empty");
+        assert_ser_tokens_error(
+            &Page::File {
+                src: Default::default(),
+            },
+            &[],
+            "page must not be empty",
+        );
     }
 }
 

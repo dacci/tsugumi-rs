@@ -342,8 +342,65 @@
       }
     },
     "Page": {
-      "type": "string",
-      "minLength": 1
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "$ref": "#/definitions/FilePage"
+        },
+        {
+          "$ref": "#/definitions/BlankPage"
+        }
+      ]
+    },
+    "FilePage": {
+      "type": "object",
+      "required": [
+        "type",
+        "src"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "file"
+        },
+        "src": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "BlankPage": {
+      "type": "object",
+      "required": [
+        "type",
+        "width",
+        "height",
+        "color"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "blank"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "color": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16777216
+        }
+      }
     }
   }
 }
